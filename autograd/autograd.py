@@ -1,25 +1,14 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Callable
-from dataclasses import dataclass
 from math import exp
-
-
-def compute_sigmoid(x: int | float):
-    return 1 / (1 + exp(-x))
-
-
-def compute_addition(x: int | float, y: int | float):
-    return x + y
-
-
-def compute_mul(x: int | float, y: int | float):
-    return x * y
 
 
 class Operable:
     def __add__(self, other):
         return Add(self, other)
+
+    def __sub__(self, other):
+        return Sub(self, other)
 
     def __mul__(self, other):
         return Mul(self, other)
@@ -32,26 +21,40 @@ class Value(Operable):
     def __init__(self, data, grad=0, requires_grad: bool = False):
         self._data = data
         self._grad = grad
-        self._requires_grad = requires_grad
+        self.requires_grad = requires_grad
 
     def __str__(self):
         return f"value node -- {self._data}"
+
+    # @property attribute in Python allows .data() method to be treated as an attribute
+    @property
+    def data(self):
+        return self._data
 
     def backward(self, grad):
         self._grad += grad
 
 
 class UnaryOperation(ABC, Operable):
-    def __init__(self, op, grad=0):
+    def __init__(self, op, data=0, grad=0):
         self._op = op
+        self._data = data
         self._grad = grad
-        self._requires_grad = self._op._requires_grad
-        if not self._op._requires_grad:
+        self.requires_grad = self._op.requires_grad
+        if not self._op.requires_grad:
             self.grad_fn = None
 
     @abstractmethod
-    def grad_fn(self):
+    def fwd_fn(self, val):
         pass
+
+    @abstractmethod
+    def grad_fn(self, grad):
+        pass
+
+    @property
+    def data(self):
+        return self._data
 
     def backward(self, grad=None):
         if not grad:
@@ -62,15 +65,20 @@ class UnaryOperation(ABC, Operable):
 
 
 class BinaryOperation(ABC, Operable):
-    def __init__(self, op1, op2, grad=0):
+    def __init__(self, op1, op2, data=0, grad=0):
         self._op1 = op1
         self._op2 = op2
+        self._data = data
         self._grad = grad
-        self._requires_grad = self._op1._requires_grad or self._op2._requires_grad
-        if not self._op1._requires_grad:
+        self.requires_grad = self._op1.requires_grad or self._op2.requires_grad
+        if not self._op1.requires_grad:
             self.grad_fn1 = None
-        if not self._op2._requires_grad:
+        if not self._op2.requires_grad:
             self.grad_fn2 = None
+
+    @abstractmethod
+    def fwd_fn(self, x, y):
+        pass
 
     @abstractmethod
     def grad_fn1(self, grad):
@@ -80,8 +88,12 @@ class BinaryOperation(ABC, Operable):
     def grad_fn2(self, grad):
         pass
 
+    @property
+    def data(self):
+        return self._data
+
     def backward(self, grad=None):
-        assert self._requires_grad
+        assert self.requires_grad
         if not grad:
             grad = 1.0
         self._grad += grad
@@ -94,7 +106,10 @@ class BinaryOperation(ABC, Operable):
 class Sigmoid(UnaryOperation):
     def __init__(self, op):
         super().__init__(op)
-        self._data = compute_sigmoid(self._op._data)
+        self._data = self.fwd_fn(self._op.data)
+
+    def fwd_fn(self, x):
+        return 1 / (1 + exp(-x))
 
     def __str__(self):
         return f"sigmoid node -- {self._data}"
@@ -106,46 +121,52 @@ class Sigmoid(UnaryOperation):
 class Add(BinaryOperation):
     def __init__(self, op1, op2):
         super().__init__(op1, op2)
-        self._data = compute_addition(self._op1._data, self._op2._data)
+        self._data = self.fwd_fn(self._op1.data, self._op2.data)
 
     def __str__(self):
         return f"add node -- {self._data}"
+
+    def fwd_fn(self, x, y):
+        return x + y
 
     def grad_fn1(self, grad):
         return grad
 
     def grad_fn2(self, grad):
         return grad
+
+
+class Sub(BinaryOperation):
+    def __init__(self, op1, op2):
+        super().__init__(op1, op2)
+        self._data = self.fwd_fn(self._op1.data, self._op2.data)
+
+    def __str__(self):
+        return f"sub node -- {self._data}"
+
+    def fwd_fn(self, x, y):
+        return x - y
+
+    def grad_fn1(self, grad):
+        return grad
+
+    def grad_fn2(self, grad):
+        return -grad
 
 
 class Mul(BinaryOperation):
     def __init__(self, op1, op2):
         super().__init__(op1, op2)
-        self._data = compute_mul(self._op1._data, self._op2._data)
+        self._data = self.fwd_fn(self._op1.data, self._op2.data)
 
     def __str__(self):
         return f"mul node -- {self._data}"
 
+    def fwd_fn(self, x, y):
+        return x * y
+
     def grad_fn1(self, grad):
-        return grad * self._op2._data
+        return grad * self._op2.data
 
     def grad_fn2(self, grad):
-        return grad * self._op1._data
-
-
-# consider adding children & grad_fns in data structures to remove the 
-# need for separate unary, binary ops.
-
-# Child -> struct w/ operand and its grad_fn
-# N-ary operation -> list of N dependencies
-
-
-@dataclass(frozen=True)
-class Child:
-    operand: Value
-    grad_fn: Callable
-
-
-class NaryOperation(Operable):
-    def __init__(self):
-        pass
+        return grad * self._op1.data
