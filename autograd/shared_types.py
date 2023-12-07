@@ -12,21 +12,15 @@ class Child:
     grad_fn: Callable
 
 
+@dataclass
 class ValueCtx:
     """
-    Context class for Value, exposing the bare minimum for operations to act on the Value type
-    without knowing about Value itself to prevent circular import issues
+    Context class for Value, exposing bare minimum for operations to act on the Value type without knowing about
+    Value itself to prevent circular import issues
 
-    Should not be used on its own, but instead only by Value
+    Should never be used independently, but instead only wrapped by Value
     """
-    def __init__(self,
-                 data: int | float,
-                 grad: int | float = 0,
-                 requires_grad: bool = False,
-                 children: List[Child] = None):
-        if children is None:
-            children = []
-        self.data = data
-        self.grad = grad
-        self.requires_grad = requires_grad
-        self.children = children
+    data: int | float
+    grad: int | float
+    requires_grad: bool
+    children: List[Child]
