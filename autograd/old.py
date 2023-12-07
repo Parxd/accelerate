@@ -2,6 +2,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from math import exp
 
+# will likely need to deprecate & refactor this
+# the value & un/binary operations classes are essentially the same, making this hard to separate into different
+# modules due to circular imports with the operable class
+
 
 class Operable:
     def __add__(self, other):

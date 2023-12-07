@@ -12,6 +12,6 @@ class Child:
 
 
 class Value:
-    def __init__(self):
-        pass
-
+    def __init__(self, data, grad=0):
+        self._data = data
+        self._grad = grad
