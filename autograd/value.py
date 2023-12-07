@@ -1,17 +1,21 @@
 from __future__ import annotations
-from typing import Callable, List
-from dataclasses import dataclass
+from typing import List
+
+from .shared_types import ValueCtx, Child
+from .add import add
 
 
-# Child -> struct w/ operand and its grad_fn
-# N-ary operation -> list of N dependencies
-@dataclass(frozen=True)
-class Child:
-    operand: Value
-    grad_fn: Callable
+class Value(ValueCtx):
+    def __init__(self,
+                 data: int | float,
+                 grad: int | float = 0,
+                 requires_grad: bool = False,
+                 children: List[Child] = None):
+        super().__init__(data, grad, requires_grad, children)
 
+    def __str__(self):
+        return f'Value({self.data})'
 
-class Value:
-    def __init__(self, data, grad=0):
-        self._data = data
-        self._grad = grad
+    def __add__(self, other):
+        res = add(self, other)  # ValueType
+        return Value(res.data, res.grad, res.requires_grad, res.children)
