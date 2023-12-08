@@ -8,6 +8,7 @@ def mul(left: ValueCtx,
     def compute(a: int | float,
                 b: int | float) -> int | float:
         return a * b
+    data = compute(left.data, right.data)
     left_grad_fn, right_grad_fn = None, None
     if left.requires_grad:
         def l_grad_fn(grad):
@@ -17,7 +18,6 @@ def mul(left: ValueCtx,
         def r_grad_fn(grad):
             return grad * left.data
         right_grad_fn = r_grad_fn
-    data = compute(left.data, right.data)
     children = [Child(left, left_grad_fn), Child(right, right_grad_fn)]
     return ValueCtx(data,
                     0,

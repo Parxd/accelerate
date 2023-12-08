@@ -26,6 +26,10 @@ class Value:
                      ctx: ValueCtx) -> Value:
         return cls(**ctx.__dict__)
 
+    def backward(self,
+                 grad: int | float = None) -> None:
+        pass
+
     def __str__(self) -> str:
         return f'Value({self._data})'
 
@@ -37,14 +41,16 @@ class Value:
                 other: Value) -> Value:
         return Value.init_context(sub(self.context, other.context))
 
-    def __rsub__(self,
-                 other: Value) -> Value:
-        return Value.init_context(sub(other.context, self.context))
-
     def __mul__(self,
                 other: Value) -> Value:
         return Value.init_context(mul(self.context, other.context))
 
-    def backward(self,
-                 grad: int | float = None) -> None:
-        pass
+    def __div__(self,
+                other: Value) -> Value:
+        return Value.init_context(div(self.context, other.context))
+
+    def sigmoid(self):
+        return Value.init_context(sigmoid(self.context))
+
+    def relu(self):
+        return Value.init_context(relu(self.context))
