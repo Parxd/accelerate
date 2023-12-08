@@ -1,4 +1,4 @@
-from autograd.value import Value
+from autograd import Value
 
 
 class TestValue:
