@@ -1,7 +1,7 @@
 from __future__ import annotations
 from math import exp
 
-from autograd.shared_types import ValueCtx, Child
+from autograd.shared_types import ValueCtx, ChildCtx
 
 
 def sigmoid(op: ValueCtx) -> ValueCtx:
@@ -13,7 +13,7 @@ def sigmoid(op: ValueCtx) -> ValueCtx:
         def grad_func(grad):
             return grad * (data * (1.0 - data))
         grad_fn = grad_func
-    children = [Child(op, grad_fn)]
+    children = [ChildCtx(op, grad_fn)]
     return ValueCtx(data,
                     0,
                     op.requires_grad,

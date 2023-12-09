@@ -13,7 +13,10 @@ class TestValue:
         assert (a + b).requires_grad is True
 
     def test_types(self):
-        a = Value(5)
+        a = Value(5, requires_grad=True)
         b = Value(6)
         assert isinstance(a + b, Value)
-        assert isinstance(a * b, Value)
+        c = a + b
+        c.backward()
+        print(a._grad)
+

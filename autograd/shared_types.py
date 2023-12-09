@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Child:
+class ChildCtx:
     """
-    Child class that holds Value context and its corresponding gradient function, assigned by operations
+    Child context class that holds Value context and its corresponding gradient function, assigned by operations
     """
-    operand: ValueCtx
+    operand_ctx: ValueCtx
     grad_fn: Callable
 
 
@@ -23,4 +23,4 @@ class ValueCtx:
     data: int | float
     grad: int | float
     requires_grad: bool
-    children: List[Child]
+    children: List[ChildCtx]
