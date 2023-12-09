@@ -43,6 +43,12 @@ class Value:
             if child.grad_fn:
                 child.operand.backward(child.grad_fn(grad))
 
+    def _wrap_children(self,
+                       left_value: Value,
+                       right_value: Value,
+                       grad_fn_list: List[Callable]) -> Value:
+        pass
+
     def __str__(self) -> str:
         return f'Value({self._data})'
 
