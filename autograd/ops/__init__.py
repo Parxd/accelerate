@@ -4,3 +4,7 @@ from .mul import mul
 from .div import div
 from .sigmoid import sigmoid
 from .relu import relu
+from .exp import exp
+from .log import log
+from .sin import sin
+from .cos import cos

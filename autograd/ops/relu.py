@@ -12,7 +12,7 @@ def relu(op: ValueCtx) -> ValueCtx:
         def grad_func(grad):
             return grad * 0 if op.data < 0 else 1
         grad_fn = grad_func
-    children = [grad_fn]
+    children = grad_fn
     return ValueCtx(data,
                     0,
                     op.requires_grad,

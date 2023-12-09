@@ -14,4 +14,4 @@ class ValueCtx:
     data: int | float
     grad: int | float
     requires_grad: bool
-    children: List[Callable]  # misleading name; it's the children's grad functions, not children themselves
+    children_fns: Callable | List[Callable]  # Callable for unary ops, List[Callable] for N-ary ops where N>=2

@@ -1,17 +1,17 @@
 from __future__ import annotations
-from math import exp
+import math
 
 from ..shared_types import ValueCtx
 
 
-def sigmoid(op: ValueCtx) -> ValueCtx:
+def log(op: ValueCtx) -> ValueCtx:
     def compute(x: int | float) -> int | float:
-        return 1 / (1 + exp(-x))
+        return math.log(x)
     data = compute(op.data)
     grad_fn = None
     if op.requires_grad:
         def grad_func(grad):
-            return grad * (data * (1.0 - data))
+            return grad / op.data
         grad_fn = grad_func
     children = grad_fn
     return ValueCtx(data,
