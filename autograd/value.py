@@ -17,7 +17,7 @@ class Value:
                  data: int | float = 0,
                  grad: int | float = 0,
                  requires_grad: bool = False,
-                 children: List[Child] = None,
+                 children: List[Child | Callable] = None,
                  context: ValueCtx = None) -> None:
         self._data = data
         self._grad = grad
@@ -48,9 +48,16 @@ class Value:
 
     def __add__(self,
                 other: Value) -> Value:
-        res_ctx = add(self.context, other.context)
-        res = Value.init_context(res_ctx)
-        res.children = [Child(self, res_ctx.children[0]), Child(other, res_ctx.children[1])]
+        res = Value.init_context(add(self.context, other.context))
+        # after this line, res.children is just a list of raw gradient functions--the one directly from the
+        # ValueContext object
+        # we need to wrap the raw gradient function with its corresponding Value object
+        # i.e. encapsulate the left grad_fn with self, and the right grad_fn with other
+        # this is why Value.children is annotated as List[Child | Callable]; at one point of running, it will have to
+        # hold onto the raw gradient callables List[Callable] until the next two lines encapsulate them  and
+        # reassign them to a List[Child]
+        wrapped_children = [Child(obj, raw_grad_fn) for obj, raw_grad_fn in zip([self, other], res.children)]
+        res.children = wrapped_children
         return res
 
     def __sub__(self,
@@ -59,11 +66,6 @@ class Value:
 
     def __mul__(self,
                 other: Value) -> Value:
-        # res_ctx = mul(self.context, other.context)
-        # children = [Child(self, res_ctx.children[0]), Child(other, res_ctx.children[1])]
-        # res = Value.init_context(res_ctx)
-        # res.children = children
-        # return res
         pass
 
     def __div__(self,
