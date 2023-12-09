@@ -3,16 +3,13 @@ from typing import List, Callable
 from dataclasses import dataclass
 
 from .ops import *
-from .shared_types import ValueCtx, ChildCtx
+from .shared_types import ValueCtx
 
 
 @dataclass(frozen=True)
 class Child:
-    """
-    Child context class that holds Value context and its corresponding gradient function, assigned by operations
-    """
-    operand: Value
-    grad_fn: Callable
+    operand: Value = None
+    grad_fn: Callable = None
 
 
 class Value:
@@ -20,7 +17,7 @@ class Value:
                  data: int | float = 0,
                  grad: int | float = 0,
                  requires_grad: bool = False,
-                 children: List[Child | ChildCtx] = None,
+                 children: List[Child] = None,
                  context: ValueCtx = None) -> None:
         self._data = data
         self._grad = grad
@@ -44,38 +41,37 @@ class Value:
         self._grad += grad
         for child in self.children:
             if child.grad_fn:
-                child.operand.backward(grad)
+                child.operand.backward(child.grad_fn(grad))
 
     def __str__(self) -> str:
         return f'Value({self._data})'
 
     def __add__(self,
                 other: Value) -> Value:
-        res = Value.init_context(add(self.context, other.context))
-        concrete_children = [Child(self, res.children[0].grad_fn), Child(other, res.children[1].grad_fn)]
-        res.children = concrete_children
+        res_ctx = add(self.context, other.context)
+        res = Value.init_context(res_ctx)
+        res.children = [Child(self, res_ctx.children[0]), Child(other, res_ctx.children[1])]
         return res
 
     def __sub__(self,
                 other: Value) -> Value:
-        res = Value.init_context(add(self.context, other.context))
-        res.children = [Child(Value.init_context(child.operand_ctx), child.grad_fn) for child in res.children]
-        return res
+        pass
 
     def __mul__(self,
                 other: Value) -> Value:
-        res = Value.init_context(add(self.context, other.context))
-        res.children = [Child(Value.init_context(child.operand_ctx), child.grad_fn) for child in res.children]
-        return res
+        # res_ctx = mul(self.context, other.context)
+        # children = [Child(self, res_ctx.children[0]), Child(other, res_ctx.children[1])]
+        # res = Value.init_context(res_ctx)
+        # res.children = children
+        # return res
+        pass
 
     def __div__(self,
                 other: Value) -> Value:
-        res = Value.init_context(add(self.context, other.context))
-        res.children = [Child(Value.init_context(child.operand_ctx), child.grad_fn) for child in res.children]
-        return res
+        pass
 
-    def sigmoid(self):
-        return Value.init_context(sigmoid(self.context))
+    def sigmoid(self) -> Value:
+        pass
 
-    def relu(self):
-        return Value.init_context(relu(self.context))
+    def relu(self) -> Value:
+        pass

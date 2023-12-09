@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from autograd.shared_types import ValueCtx, ChildCtx
+from ..shared_types import ValueCtx
 
 
 def relu(op: ValueCtx) -> ValueCtx:
@@ -12,7 +12,7 @@ def relu(op: ValueCtx) -> ValueCtx:
         def grad_func(grad):
             return grad * 0 if op.data < 0 else 1
         grad_fn = grad_func
-    children = [ChildCtx(op, grad_fn)]
+    children = [grad_fn]
     return ValueCtx(data,
                     0,
                     op.requires_grad,

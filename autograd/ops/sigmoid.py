@@ -1,7 +1,7 @@
 from __future__ import annotations
 from math import exp
 
-from autograd.shared_types import ValueCtx, ChildCtx
+from ..shared_types import ValueCtx
 
 
 def sigmoid(op: ValueCtx) -> ValueCtx:

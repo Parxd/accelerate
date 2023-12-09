@@ -1,4 +1,5 @@
 from autograd import Value
+import pytest
 
 
 class TestValue:
@@ -16,7 +17,11 @@ class TestValue:
         a = Value(5, requires_grad=True)
         b = Value(6)
         assert isinstance(a + b, Value)
-        c = a + b
-        c.backward()
-        print(a._grad)
 
+    def test_expr(self):
+        a = Value(5.1293, requires_grad=True)
+        b = Value(153.43203, requires_grad=True)
+        c = Value(2.105, requires_grad=True)
+        d = (a + b) * c
+        d.backward()
+        assert c._grad == pytest.approx((a + b)._data)

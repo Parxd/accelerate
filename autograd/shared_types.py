@@ -3,15 +3,6 @@ from typing import List, Callable
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
-class ChildCtx:
-    """
-    Child context class that holds Value context and its corresponding gradient function, assigned by operations
-    """
-    operand_ctx: ValueCtx
-    grad_fn: Callable
-
-
 @dataclass
 class ValueCtx:
     """
@@ -23,4 +14,4 @@ class ValueCtx:
     data: int | float
     grad: int | float
     requires_grad: bool
-    children: List[ChildCtx]
+    children: List[Callable]

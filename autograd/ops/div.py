@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from autograd.shared_types import ValueCtx, ChildCtx
+from ..shared_types import ValueCtx
 
 
 def div(left: ValueCtx,
