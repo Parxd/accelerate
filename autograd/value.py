@@ -7,20 +7,19 @@ from .shared_types import ValueCtx
 
 
 @dataclass(frozen=True)
-class Child:
+class ValueChild:
     operand: Value = None
     grad_fn: Callable = None
 
 
 def _wrap_child_unary(value: Value,
-                      grad_fn: Callable) -> List[Child]:
-    return [Child(value, grad_fn)]
+                      grad_fn: Callable) -> List[ValueChild]:
+    return [ValueChild(value, grad_fn)]
 
 
-def _wrap_children_binary(left_value: Value,
-                          right_value: Value,
-                          grad_fn_list: List[Callable]) -> List[Child]:
-    return [Child(value, grad_fn) for value, grad_fn in zip([left_value, right_value], grad_fn_list)]
+def _wrap_children_nary(values: List[Value],
+                        grad_fn_list: List[Callable]) -> List[ValueChild]:
+    return [ValueChild(value, grad_fn) for value, grad_fn in zip(values, grad_fn_list)]
 
 
 class Value:
@@ -28,7 +27,7 @@ class Value:
                  data: int | float = 0,
                  grad: int | float = 0,
                  requires_grad: bool = False,
-                 children: List[Child] = None,
+                 children: List[ValueChild] = None,
                  children_fns: Callable | List[Callable] = None,
                  context: ValueCtx = None) -> None:
         self._data = data
@@ -59,60 +58,52 @@ class Value:
     def __str__(self) -> str:
         return f'Value({self._data})'
 
-    def __add__(self,
-                other: Value) -> Value:
-        res = Value.init_context(add(self.context, other.context))
-        # after this line, res.children_fns is just a list of raw gradient functions--the one directly from the
-        # ValueContext object
-        # we need to wrap the raw gradient function with its corresponding Value object and assign to res.children
-        # i.e. encapsulate the left grad_fn with self, and the right grad_fn with other for binary operations
-        res.children = _wrap_children_binary(self, other, res.children_fns)
+    # def __add__(self,
+    #             other: Value) -> Value:
+    #     res = Value.init_context(add(self.context, other.context))
+    #     # after this line, res.children_fns is just a list of raw gradient functions--the one directly from the
+    #     # ValueContext object
+    #     # we need to wrap the raw gradient function with its corresponding Value object and assign to res.children
+    #     # i.e. encapsulate the left grad_fn with self, and the right grad_fn with other for binary operations
+    #     res.children = _wrap_children_binary(self, other, res.children_fns)
+    #     return res
+
+    def _unary_operation(self, op: Callable) -> Value:
+        res = Value.init_context(op(self.context))
+        res.children = _wrap_child_unary(self, res.children_fns)
         return res
 
-    def __sub__(self,
-                other: Value) -> Value:
-        res = Value.init_context(sub(self.context, other.context))
-        res.children = _wrap_children_binary(self, other, res.children_fns)
+    def _binary_operation(self, other: Value, op: Callable) -> Value:
+        res = Value.init_context(op(self.context, other.context))
+        res.children = _wrap_children_nary([self, other], res.children_fns)
         return res
 
-    def __mul__(self,
-                other: Value) -> Value:
-        res = Value.init_context(mul(self.context, other.context))
-        res.children = _wrap_children_binary(self, other, res.children_fns)
-        return res
+    def __add__(self, other: Value) -> Value:
+        return self._binary_operation(other, add)
 
-    def __div__(self,
-                other: Value) -> Value:
-        res = Value.init_context(div(self.context, other.context))
-        res.children = _wrap_children_binary(self, other, res.children_fns)
-        return res
+    def __sub__(self, other: Value) -> Value:
+        return self._binary_operation(other, sub)
+
+    def __mul__(self, other: Value) -> Value:
+        return self._binary_operation(other, mul)
+
+    def __div__(self, other: Value) -> Value:
+        return self._binary_operation(other, div)
 
     def log(self) -> Value:
-        res = Value.init_context(log(self.context))
-        res.children = _wrap_child_unary(self, res.children_fns)
-        return res
+        return self._unary_operation(log)
 
     def exp(self) -> Value:
-        res = Value.init_context(exp(self.context))
-        res.children = _wrap_child_unary(self, res.children_fns)
-        return res
+        return self._unary_operation(exp)
 
     def sigmoid(self) -> Value:
-        res = Value.init_context(sigmoid(self.context))
-        res.children = _wrap_child_unary(self, res.children_fns)
-        return res
+        return self._unary_operation(sigmoid)
 
     def relu(self) -> Value:
-        res = Value.init_context(relu(self.context))
-        res.children = _wrap_child_unary(self, res.children_fns)
-        return res
+        return self._unary_operation(relu)
 
     def sin(self) -> Value:
-        res = Value.init_context(sin(self.context))
-        res.children = _wrap_child_unary(self, res.children_fns)
-        return res
+        return self._unary_operation(sin)
 
     def cos(self) -> Value:
-        res = Value.init_context(cos(self.context))
-        res.children = _wrap_child_unary(self, res.children_fns)
-        return res
+        return self._unary_operation(cos)
