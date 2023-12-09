@@ -14,4 +14,4 @@ class ValueCtx:
     data: int | float
     grad: int | float
     requires_grad: bool
-    children: List[Callable]
+    children: List[Callable]  # misleading name; it's the children's grad functions, not children themselves

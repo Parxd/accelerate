@@ -54,7 +54,7 @@ class Value:
         # we need to wrap the raw gradient function with its corresponding Value object
         # i.e. encapsulate the left grad_fn with self, and the right grad_fn with other
         # this is why Value.children is annotated as List[Child | Callable]; at one point of running, it will have to
-        # hold onto the raw gradient callables List[Callable] until the next two lines encapsulate them  and
+        # hold onto the raw gradient callables List[Callable] until the next two lines encapsulate them and
         # reassign them to a List[Child]
         wrapped_children = [Child(obj, raw_grad_fn) for obj, raw_grad_fn in zip([self, other], res.children)]
         res.children = wrapped_children
@@ -62,18 +62,33 @@ class Value:
 
     def __sub__(self,
                 other: Value) -> Value:
-        pass
+        res = Value.init_context(sub(self.context, other.context))
+        wrapped_children = [Child(obj, raw_grad_fn) for obj, raw_grad_fn in zip([self, other], res.children)]
+        res.children = wrapped_children
+        return res
 
     def __mul__(self,
                 other: Value) -> Value:
-        pass
+        res = Value.init_context(mul(self.context, other.context))
+        wrapped_children = [Child(obj, raw_grad_fn) for obj, raw_grad_fn in zip([self, other], res.children)]
+        res.children = wrapped_children
+        return res
 
     def __div__(self,
                 other: Value) -> Value:
-        pass
+        res = Value.init_context(div(self.context, other.context))
+        wrapped_children = [Child(obj, raw_grad_fn) for obj, raw_grad_fn in zip([self, other], res.children)]
+        res.children = wrapped_children
+        return res
 
     def sigmoid(self) -> Value:
-        pass
+        res = Value.init_context(sigmoid(self.context))
+        wrapped_children = Child(self, res.children[0])
+        res.children = wrapped_children
+        return res
 
     def relu(self) -> Value:
-        pass
+        res = Value.init_context(relu(self.context))
+        wrapped_children = Child(self, res.children[0])
+        res.children = wrapped_children
+        return res

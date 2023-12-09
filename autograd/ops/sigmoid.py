@@ -13,7 +13,7 @@ def sigmoid(op: ValueCtx) -> ValueCtx:
         def grad_func(grad):
             return grad * (data * (1.0 - data))
         grad_fn = grad_func
-    children = [ChildCtx(op, grad_fn)]
+    children = [grad_fn]
     return ValueCtx(data,
                     0,
                     op.requires_grad,
