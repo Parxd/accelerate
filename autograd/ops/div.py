@@ -18,7 +18,7 @@ def div(left: ValueCtx,
         def r_grad_fn(grad):
             return grad * (-left.data / (right.data ** 2))
         right_grad_fn = r_grad_fn
-    children = [ChildCtx(left, left_grad_fn), ChildCtx(right, right_grad_fn)]
+    children = [left_grad_fn, right_grad_fn]
     return ValueCtx(data,
                     0,
                     left.requires_grad or right.requires_grad,
