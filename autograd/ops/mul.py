@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from ..shared_types import ValueCtx
+from ..shared_types import ValueCtx, Constant
 
 
 def mul(left: ValueCtx,
-        right: ValueCtx) -> ValueCtx:
+        right: Constant | ValueCtx) -> ValueCtx:
     def compute(a: int | float,
                 b: int | float) -> int | float:
         return a * b

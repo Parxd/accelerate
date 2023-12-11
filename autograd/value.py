@@ -3,23 +3,13 @@ from typing import List, Callable
 from dataclasses import dataclass
 
 from .ops import *
-from .shared_types import ValueCtx
+from .shared_types import ValueCtx, Constant
 
 
 @dataclass(frozen=True)
 class ValueChild:
     operand: Value = None
     grad_fn: Callable = None
-
-
-def _wrap_child_unary(value: Value,
-                      grad_fn: Callable) -> List[ValueChild]:
-    return [ValueChild(value, grad_fn)]
-
-
-def _wrap_children_nary(values: List[Value],
-                        grad_fn_list: List[Callable]) -> List[ValueChild]:
-    return [ValueChild(value, grad_fn) for value, grad_fn in zip(values, grad_fn_list)]
 
 
 class Value:
@@ -55,40 +45,56 @@ class Value:
             if child.grad_fn:
                 child.operand.backward(child.grad_fn(grad))
 
+    def clear_grad(self):
+        self._grad = 0
+
     def __str__(self) -> str:
         return f'Value({self._data})'
 
-    # def __add__(self,
-    #             other: Value) -> Value:
-    #     res = Value.init_context(add(self.context, other.context))
-    #     # after this line, res.children_fns is just a list of raw gradient functions--the one directly from the
-    #     # ValueContext object
-    #     # we need to wrap the raw gradient function with its corresponding Value object and assign to res.children
-    #     # i.e. encapsulate the left grad_fn with self, and the right grad_fn with other for binary operations
-    #     res.children = _wrap_children_binary(self, other, res.children_fns)
-    #     return res
-
     def _unary_operation(self, op: Callable) -> Value:
         res = Value.init_context(op(self.context))
-        res.children = _wrap_child_unary(self, res.children_fns)
+        res.children = [ValueChild(self, res.children_fns)]
         return res
 
     def _binary_operation(self, other: Value, op: Callable) -> Value:
-        res = Value.init_context(op(self.context, other.context))
-        res.children = _wrap_children_nary([self, other], res.children_fns)
+        # creating temp context for constants
+        if isinstance(other, (int, float)):
+            res = Value.init_context(op(self.context, ValueCtx(other, 0, False, None)))
+        else:
+            res = Value.init_context(op(self.context, other.context))
+        # after this line, res.children_fns is just a list of raw gradient functions--the one directly from the
+        # ValueContext object
+        # we need to wrap the raw gradient function with its corresponding Value object and assign to res.children
+        # i.e. encapsulate the left grad_fn with self, and the right grad_fn with other for binary operations
+        res.children = [ValueChild(self, res.children_fns[0]), ValueChild(other, res.children_fns[1])]
         return res
 
-    def __add__(self, other: Value) -> Value:
+    def __neg__(self) -> Value:
+        return self.__mul__(-1)
+
+    def __add__(self, other: int | float | Value) -> Value:
         return self._binary_operation(other, add)
 
-    def __sub__(self, other: Value) -> Value:
+    def __radd__(self, other: int | float | Value) -> Value:
+        return self.__add__(other)
+
+    def __sub__(self, other: int | float | Value) -> Value:
         return self._binary_operation(other, sub)
 
-    def __mul__(self, other: Value) -> Value:
+    def __rsub__(self, other: int | float | Value) -> Value:
+        return -self.__sub__(other)
+
+    def __mul__(self, other: int | float | Value) -> Value:
         return self._binary_operation(other, mul)
 
-    def __div__(self, other: Value) -> Value:
+    def __rmul__(self, other: int | float | Value) -> Value:
+        return self.__mul__(other)
+
+    def __div__(self, other: int | float | Value) -> Value:
         return self._binary_operation(other, div)
+
+    def __pow__(self, power):
+        pass
 
     def log(self) -> Value:
         return self._unary_operation(log)
