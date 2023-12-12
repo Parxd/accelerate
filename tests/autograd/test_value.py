@@ -46,7 +46,7 @@ class TestValue:
         assert a.sigmoid()._data == pytest.approx(0.731058578630074)
 
         a.sigmoid().backward()
-        assert a._grad == 0
+        assert a._grad == pytest.approx(0.19661193324144993)
 
     def test_relu(self):
         a = Value(-2, requires_grad=True)

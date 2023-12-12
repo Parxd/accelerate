@@ -3,7 +3,7 @@ from typing import List, Callable
 from dataclasses import dataclass
 
 from .ops import *
-from .shared_types import ValueCtx, Constant
+from .shared_types import ValueCtx
 
 
 @dataclass(frozen=True)
@@ -51,12 +51,15 @@ class Value:
     def __str__(self) -> str:
         return f'Value({self._data})'
 
-    def _unary_operation(self, op: Callable) -> Value:
+    def _unary_operation(self,
+                         op: Callable) -> Value:
         res = Value.init_context(op(self.context))
         res.children = [ValueChild(self, res.children_fns)]
         return res
 
-    def _binary_operation(self, other: Value, op: Callable) -> Value:
+    def _binary_operation(self,
+                          other: Value,
+                          op: Callable) -> Value:
         # creating temp context for constants
         if isinstance(other, (int, float)):
             res = Value.init_context(op(self.context, ValueCtx(other, 0, False, None)))
@@ -72,28 +75,39 @@ class Value:
     def __neg__(self) -> Value:
         return self.__mul__(-1)
 
-    def __add__(self, other: int | float | Value) -> Value:
+    def __add__(self,
+                other: int | float | Value) -> Value:
         return self._binary_operation(other, add)
 
-    def __radd__(self, other: int | float | Value) -> Value:
+    def __radd__(self,
+                 other: int | float | Value) -> Value:
         return self.__add__(other)
 
-    def __sub__(self, other: int | float | Value) -> Value:
+    def __sub__(self,
+                other: int | float | Value) -> Value:
         return self._binary_operation(other, sub)
 
-    def __rsub__(self, other: int | float | Value) -> Value:
+    def __rsub__(self,
+                 other: int | float | Value) -> Value:
         return -self.__sub__(other)
 
-    def __mul__(self, other: int | float | Value) -> Value:
+    def __mul__(self,
+                other: int | float | Value) -> Value:
         return self._binary_operation(other, mul)
 
-    def __rmul__(self, other: int | float | Value) -> Value:
+    def __rmul__(self,
+                 other: int | float | Value) -> Value:
         return self.__mul__(other)
 
-    def __div__(self, other: int | float | Value) -> Value:
+    def __div__(self,
+                other: int | float | Value) -> Value:
         return self._binary_operation(other, div)
 
-    def __pow__(self, power):
+    def __rdiv__(self, other):
+        pass
+
+    def __pow__(self,
+                power):
         pass
 
     def log(self) -> Value:
