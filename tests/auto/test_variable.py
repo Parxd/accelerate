@@ -50,3 +50,21 @@ class TestVariable:
         assert b.data == 0
         b.backward()
         assert b.grad == 1
+
+    def test_tanh(self):
+        a = Variable(1, requires_grad=True)
+        b = a.tanh()
+        assert b.data == pytest.approx(0.7615942)
+        b.backward()
+        assert a.grad == pytest.approx(0.4199743416140257)
+
+    def test_chain(self):
+        a = Variable(2, requires_grad=True)
+        b = Variable(4, requires_grad=True)
+        c = Variable(5, requires_grad=True)
+        d = Variable(0.5, requires_grad=True)
+        e = (a + b) * c * d.sigmoid()
+        assert isinstance(e, Variable)
+        assert e.data == pytest.approx(18.6737799361)
+        e.backward()
+        assert c.grad == pytest.approx((a.data + b.data) * d.sigmoid().data)

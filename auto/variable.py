@@ -89,3 +89,12 @@ class Variable:
                         ReluBackward() if self.requires_grad else None,
                         [self],
                         False)
+
+    def tanh(self):
+        data = tanh(self.data)
+        return Variable(data,
+                        self.requires_grad,
+                        0,
+                        TanhBackward() if self.requires_grad else None,
+                        [self],
+                        False)
