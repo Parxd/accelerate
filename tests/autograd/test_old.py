@@ -1,4 +1,4 @@
-from autograd.deprecated.old import Value
+from autograd.old import Value
 
 
 def main():
@@ -6,7 +6,6 @@ def main():
     b = Value(7.213, requires_grad=True)
     c = a * b
     c.backward()
-    print(a._grad)
 
     return
 

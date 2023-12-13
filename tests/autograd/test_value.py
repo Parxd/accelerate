@@ -2,6 +2,7 @@ from autograd import Value
 import pytest
 
 
+@pytest.mark.skip("autograd deprecated")
 class TestValue:
     def test_attr(self):
         pass

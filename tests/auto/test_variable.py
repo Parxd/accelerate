@@ -35,5 +35,18 @@ class TestVariable:
         a = Variable(5, True)
         b = a.sigmoid()
         assert b.data == pytest.approx(0.9933071490757268)
-        # b.backward()
-        # assert a.grad == pytest.approx(0.0066480566707786)
+        b.backward()
+        assert a.grad == pytest.approx(0.0066480566707786)
+
+    def test_relu(self):
+        a = Variable(1, requires_grad=True)
+        b = a.relu()
+        assert b.data == 1
+        b.backward()
+        assert b.grad == 1
+
+        a.set(-1)
+        b = a.relu()
+        assert b.data == 0
+        b.backward()
+        assert b.grad == 1

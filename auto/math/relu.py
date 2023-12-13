@@ -1,15 +1,14 @@
-from math import exp
 from auto.math.backward_base import BackwardBase
 from auto.gradient_context import GradientContext
 
 
-def sigmoid(a):
-    return 1 / (1 + exp(-a))
+def relu(a):
+    return int(a > 0) * a
 
 
-class SigmoidBackward(BackwardBase):
+class ReluBackward(BackwardBase):
     def compute_grad(self,
                      context: GradientContext):
         assert context.op2_data is None
         # return as tuple
-        return context.parent_grad * (context.parent_data * (1 - context.parent_data)),
+        return context.parent_grad * int(context.op1_data > 0) * 1,

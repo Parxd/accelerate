@@ -1,9 +1,17 @@
+from __future__ import annotations
+from typing import List
 from auto.math import *
 from .gradient_context import GradientContext
 
 
 class Variable:
-    def __init__(self, data, requires_grad, grad=0, grad_fn=None, children=None, leaf=True):
+    def __init__(self,
+                 data: int | float,
+                 requires_grad: bool = False,
+                 grad: int | float = 0,
+                 grad_fn: BackwardBase = None,
+                 children: List[Variable] = None,
+                 leaf: bool = True):
         if children is None:
             children = []
         self.data = data
@@ -14,20 +22,31 @@ class Variable:
         # check if leaf node in graph
         self.leaf = leaf
 
-    def backward(self, grad=None):
+    def set(self, data):
+        self.data = data
+        self.clear_grad()
+
+    def clear_grad(self):
+        self.grad = 0
+
+    def backward(self,
+                 grad: int | float = None):
         assert self.requires_grad
         if grad is None:
             grad = 1
         self.grad += grad
         if not self.leaf:
-            gradients = self.grad_fn.compute_grad(GradientContext(
-                self.children[0].data,
-                self.children[1].data,
-                self.data,
-                self.grad
-            ))
-            self.children[0].backward(gradients[0])
-            self.children[1].backward(gradients[1])
+            child_data = [child.data if child else None for child in self.children]
+            child_data.append(None) if len(child_data) == 1 else child_data
+            gradients = self.grad_fn.compute_grad(
+                GradientContext(
+                    *child_data,
+                    self.data,
+                    self.grad
+                )
+            )
+            for child, grad_input in zip(self.children, gradients):
+                child.backward(grad_input)
 
     def __str__(self):
         return \
@@ -35,19 +54,21 @@ class Variable:
 
     def __add__(self, other):
         data = add(self.data, other.data)
+        grad_req = self.requires_grad or other.requires_grad
         return Variable(data,
-                        self.requires_grad or other.requires_grad,
+                        grad_req,
                         0,
-                        AddBackward(),
+                        AddBackward() if grad_req else None,
                         [self, other],
                         False)
 
     def __mul__(self, other):
         data = mul(self.data, other.data)
+        grad_req = self.requires_grad or other.requires_grad
         return Variable(data,
-                        self.requires_grad or other.requires_grad,
+                        grad_req,
                         0,
-                        MulBackward(),
+                        MulBackward() if grad_req else None,
                         [self, other],
                         False)
 
@@ -56,6 +77,15 @@ class Variable:
         return Variable(data,
                         self.requires_grad,
                         0,
-                        SigmoidBackward(),
+                        SigmoidBackward() if self.requires_grad else None,
+                        [self],
+                        False)
+
+    def relu(self):
+        data = relu(self.data)
+        return Variable(data,
+                        self.requires_grad,
+                        0,
+                        ReluBackward() if self.requires_grad else None,
                         [self],
                         False)

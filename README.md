@@ -1,1 +1,1 @@
-# ⚡ accelerate: gpu-accelerated deep learning library
+# ⚡ accelerate: a deep learning library
