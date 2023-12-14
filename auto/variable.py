@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import List
+from typing import Callable, List
 from auto.math import *
-from .gradient_context import GradientContext
+from auto.gradient_context import GradientContext
 
 
 class Variable:
@@ -53,12 +53,28 @@ class Variable:
             f"auto.Variable({self.data}, grad={self.grad}, requires_grad={self.requires_grad}, grad_fn={self.grad_fn}"
 
     def __add__(self, other):
-        data = add(self.data, other.data)
-        grad_req = self.requires_grad or other.requires_grad
+        if isinstance(other, (int, float)):
+            data = add(self.data, other)
+            grad_req = self.requires_grad
+            children = [self]
+        else:
+            data = add(self.data, other.data)
+            grad_req = self.requires_grad or other.requires_grad
+            children = [self, other]
         return Variable(data,
                         grad_req,
                         0,
                         AddBackward() if grad_req else None,
+                        children,
+                        False)
+
+    def __sub__(self, other):
+        data = sub(self.data, other.data)
+        grad_req = self.requires_grad or other.requires_grad
+        return Variable(data,
+                        grad_req,
+                        0,
+                        SubBackward() if grad_req else None,
                         [self, other],
                         False)
 

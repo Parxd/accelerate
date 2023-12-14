@@ -1,4 +1,4 @@
-from autograd import Value
+from auto.deprecated.autograd import Value
 import pytest
 
 

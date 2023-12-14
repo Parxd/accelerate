@@ -1,4 +1,4 @@
-from autograd.old import Value
+from auto.deprecated.autograd.old import Value
 
 
 def main():

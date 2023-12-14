@@ -22,6 +22,15 @@ class TestVariable:
         assert a.grad == 1
         assert b.grad == 1
 
+    def test_subtraction(self):
+        a = Variable(5, True)
+        b = Variable(10, True)
+        c = a - b
+        assert c.data == -5
+        c.backward()
+        assert a.grad == 1
+        assert b.grad == -1
+
     def test_multiplication(self):
         a = Variable(5, True)
         b = Variable(10, True)
@@ -68,3 +77,10 @@ class TestVariable:
         assert e.data == pytest.approx(18.6737799361)
         e.backward()
         assert c.grad == pytest.approx((a.data + b.data) * d.sigmoid().data)
+
+    def test_consts(self):
+        a = Variable(5, requires_grad=True)
+        b = a + 5
+        assert b.data == 10
+        b.backward()
+        assert a.grad == 1
