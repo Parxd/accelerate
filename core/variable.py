@@ -9,7 +9,7 @@ class Variable:
                  data: int | float,
                  requires_grad: bool = False,
                  grad: int | float = 0,
-                 grad_fn: BackwardBase = None,
+                 grad_fn: Type[BackwardBase] = None,
                  children: List[Variable] = None,
                  leaf: bool = True):
         if children is None:
@@ -50,6 +50,49 @@ class Variable:
                 if child.requires_grad:
                     child.backward(grad_input)
 
+    def __str__(self):
+        return \
+            f"auto.Variable({self.data}, grad={self.grad}, requires_grad={self.requires_grad}, grad_fn={self.grad_fn}"
+
+    def __neg__(self):
+        return self.__mul__(-1)
+
+    def __add__(self, other):
+        return self._binary_op(other, add, AddBackward)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        return self._binary_op(other, sub, SubBackward)
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
+
+    def __mul__(self, other):
+        return self._binary_op(other, mul, MulBackward)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        return self._binary_op(other, div, DivBackward)
+
+    def __rtruediv__(self, other):
+        return self.__truediv__(other)
+
+    def __pow__(self, other, modulo=None):
+        return self._binary_op(other, power, PowBackward)
+
+    def sigmoid(self):
+        return self._unary_op(sigmoid, SigmoidBackward)
+
+    def relu(self):
+        return self._unary_op(relu, ReluBackward)
+
+    def tanh(self):
+        return self._unary_op(tanh, TanhBackward)
+
     def _unary_op(self,
                   op: Callable,
                   grad_fn: Type[BackwardBase]):
@@ -75,34 +118,3 @@ class Variable:
                         grad_fn() if grad_req else None,
                         [self, other],
                         False)
-
-    def __str__(self):
-        return \
-            f"auto.Variable({self.data}, grad={self.grad}, requires_grad={self.requires_grad}, grad_fn={self.grad_fn}"
-
-    def __add__(self, other):
-        return self._binary_op(other, add, AddBackward)
-
-    def __radd__(self, other):
-        return self.__add__(other)
-
-    def __sub__(self, other):
-        return self._binary_op(other, sub, SubBackward)
-
-    def __rsub__(self, other):
-        return self.__sub__(other)
-
-    def __mul__(self, other):
-        return self._binary_op(other, mul, MulBackward)
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-    def sigmoid(self):
-        return self._unary_op(sigmoid, SigmoidBackward)
-
-    def relu(self):
-        return self._unary_op(relu, ReluBackward)
-
-    def tanh(self):
-        return self._unary_op(tanh, TanhBackward)

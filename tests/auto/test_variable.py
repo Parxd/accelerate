@@ -1,5 +1,5 @@
 import pytest
-from auto.variable import Variable
+from core.variable import Variable
 from auto.math.add import AddBackward
 
 
@@ -39,6 +39,15 @@ class TestVariable:
         c.backward()
         assert a.grad == 10
         assert b.grad == 5
+
+    def test_division(self):
+        a = Variable(10, True)
+        b = Variable(5, True)
+        c = a / b
+        assert c.data == 2
+        c.backward()
+        assert a.grad == pytest.approx(1 / 5)
+        assert b.grad == pytest.approx(-10 / 25)
 
     def test_sigmoid(self):
         a = Variable(5, True)
