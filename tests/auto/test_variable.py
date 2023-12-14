@@ -78,9 +78,23 @@ class TestVariable:
         e.backward()
         assert c.grad == pytest.approx((a.data + b.data) * d.sigmoid().data)
 
-    def test_consts(self):
+    def test_consts1(self):
         a = Variable(5, requires_grad=True)
         b = a + 5
         assert b.data == 10
         b.backward()
         assert a.grad == 1
+
+    def test_consts2(self):
+        a = Variable(5, requires_grad=True)
+        b = 5 * a
+        assert b.data == 25
+        b.backward()
+        assert a.grad == 5
+
+    def test_consts3(self):
+        a = Variable(5, requires_grad=True)
+        b = a * 5 - 10
+        assert b.data == 15
+        b.backward()
+        assert a.grad == 5

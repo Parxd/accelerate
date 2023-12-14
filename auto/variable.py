@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, List
+from typing import Callable, List, Type
 from auto.math import *
 from auto.gradient_context import GradientContext
 
@@ -22,7 +22,8 @@ class Variable:
         # check if leaf node in graph
         self.leaf = leaf
 
-    def set(self, data):
+    def set(self,
+            data: int | float):
         self.data = data
         self.clear_grad()
 
@@ -46,71 +47,62 @@ class Variable:
                 )
             )
             for child, grad_input in zip(self.children, gradients):
-                child.backward(grad_input)
+                if child.requires_grad:
+                    child.backward(grad_input)
+
+    def _unary_op(self,
+                  op: Callable,
+                  grad_fn: Type[BackwardBase]):
+        data = op(self.data)
+        return Variable(data,
+                        self.requires_grad,
+                        0,
+                        grad_fn() if self.requires_grad else None,
+                        [self],
+                        False)
+
+    def _binary_op(self,
+                   other: int | float | Variable,
+                   op: Callable,
+                   grad_fn: Type[BackwardBase]):
+        if isinstance(other, (int, float)):
+            other = Variable(other)
+        data = op(self.data, other.data)
+        grad_req = self.requires_grad or other.requires_grad
+        return Variable(data,
+                        grad_req,
+                        0,
+                        grad_fn() if grad_req else None,
+                        [self, other],
+                        False)
 
     def __str__(self):
         return \
             f"auto.Variable({self.data}, grad={self.grad}, requires_grad={self.requires_grad}, grad_fn={self.grad_fn}"
 
     def __add__(self, other):
-        if isinstance(other, (int, float)):
-            data = add(self.data, other)
-            grad_req = self.requires_grad
-            children = [self]
-        else:
-            data = add(self.data, other.data)
-            grad_req = self.requires_grad or other.requires_grad
-            children = [self, other]
-        return Variable(data,
-                        grad_req,
-                        0,
-                        AddBackward() if grad_req else None,
-                        children,
-                        False)
+        return self._binary_op(other, add, AddBackward)
+
+    def __radd__(self, other):
+        return self.__add__(other)
 
     def __sub__(self, other):
-        data = sub(self.data, other.data)
-        grad_req = self.requires_grad or other.requires_grad
-        return Variable(data,
-                        grad_req,
-                        0,
-                        SubBackward() if grad_req else None,
-                        [self, other],
-                        False)
+        return self._binary_op(other, sub, SubBackward)
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
 
     def __mul__(self, other):
-        data = mul(self.data, other.data)
-        grad_req = self.requires_grad or other.requires_grad
-        return Variable(data,
-                        grad_req,
-                        0,
-                        MulBackward() if grad_req else None,
-                        [self, other],
-                        False)
+        return self._binary_op(other, mul, MulBackward)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
     def sigmoid(self):
-        data = sigmoid(self.data)
-        return Variable(data,
-                        self.requires_grad,
-                        0,
-                        SigmoidBackward() if self.requires_grad else None,
-                        [self],
-                        False)
+        return self._unary_op(sigmoid, SigmoidBackward)
 
     def relu(self):
-        data = relu(self.data)
-        return Variable(data,
-                        self.requires_grad,
-                        0,
-                        ReluBackward() if self.requires_grad else None,
-                        [self],
-                        False)
+        return self._unary_op(relu, ReluBackward)
 
     def tanh(self):
-        data = tanh(self.data)
-        return Variable(data,
-                        self.requires_grad,
-                        0,
-                        TanhBackward() if self.requires_grad else None,
-                        [self],
-                        False)
+        return self._unary_op(tanh, TanhBackward)
