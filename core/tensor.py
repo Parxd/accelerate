@@ -1,24 +1,19 @@
 from __future__ import annotations
+from typing import Type, List
 from enum import Enum
 import cupy as cp
 import numpy as np
 
-TensorType = np.ndarray | cp.ndarray
+TensorConstructType = np.ndarray | List
+TensorType = TensorConstructType | cp.ndarray
 
 
-def ensure_type(tensor: TensorType, device: DEVICE):
-    if device == DEVICE.GPU and not isinstance(tensor, cp.ndarray) or \
-            device == DEVICE.CPU and not isinstance(tensor, np.ndarray):
-        raise TypeError("device type not aligned with data")
-
-
-def device_check(tensor: TensorType):
-    if not isinstance(tensor, TensorType):
-        raise TypeError("array not of TensorType")
-    if isinstance(tensor, np.ndarray):
-        return DEVICE.CPU
-    else:
-        return DEVICE.GPU
+def check_tensor(tensor):
+    if not isinstance(tensor, TensorConstructType):
+        raise TypeError("tensor must be constructed from list or numpy array")
+    if isinstance(tensor, List):
+        return np.array(tensor)
+    return tensor
 
 
 class DEVICE(Enum):
@@ -27,36 +22,34 @@ class DEVICE(Enum):
 
 
 class Tensor:
-    """
-    Tensor class
-    - either lives on CPU or GPU
-    - supports multiple datatypes
-    - needs to check if type(tensor.data) aligns with tensor.device
-    """
     def __init__(self,
-                 data,
-                 requires_grad=False,
-                 grad=None,
-                 grad_fn=None,
-                 children=None,
-                 leaf=True,
-                 datatype=np.float32):
-        if children is None:
-            children = []
-        self.data = data
-        self.requires_grad = requires_grad
-        self.grad = grad
-        self.grad_fn = grad_fn
-        self.children = children
-        self.leaf = leaf
-        self.device = device_check(self.data)
-        self.datatype = datatype
+                 data: TensorType):
+        self.data = check_tensor(data)
+        self.shape = self.data.shape
+        self.device = DEVICE.CPU
 
-    def set_device(self, device):
+    def to(self,
+           device: DEVICE):
+        # Loads data to specified device type
+        self._check_alignment()
         if self.device == device:
             return
         if device == DEVICE.CPU:
-            self.data = np.asarray(self.data)
+            self.data = self.data.get()
         else:
-            self.data = cp.asarray(self.data)
+            self.data = cp.array(self.data)
         self.device = device
+
+    def __str__(self):
+        return f"Tensor(data={self.data}, device={self.device})"
+
+    def __getitem__(self, item):
+        return self.data[item]
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
+    def _check_alignment(self):
+        if self.device == DEVICE.CPU and not isinstance(self.data, np.ndarray) or \
+                self.device == DEVICE.GPU and not isinstance(self.data, cp.ndarray):
+            raise TypeError("data and device not aligned")
