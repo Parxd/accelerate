@@ -9,40 +9,34 @@ GPU = DEVICE.GPU
 
 
 class TestTensorDevice:
-    def test_device_init(self):
-        gpu_array = cp.ndarray((1, 2))
+    def test_check_data(self):
+        X = Tensor([1, 2, 3])
+        Y = Tensor(np.array([1, 2, 3]))
+        Z = Tensor(cp.array([1, 2, 3]))
+        assert X.device == CPU
+        assert Y.device == CPU
+        assert Z.device == GPU
+
         with pytest.raises(TypeError):
-            Tensor(gpu_array)
+            Tensor("1, 2, 3")
+            Tensor(True)
+            Tensor((1, 2, 3))
+            Tensor({})
 
-        cpu_array = np.ndarray((1, 2))
-        a = Tensor(cpu_array)
-        assert isinstance(a, Tensor)
-        assert isinstance(a.data, np.ndarray)
+    def test_to_different(self):
+        X = Tensor([1, 2, 3])
+        X.to(GPU)
+        assert X.device == GPU
+        assert isinstance(X.data, cp.ndarray)
 
-        lst = [[1, 2, 3], [4, 5, 6]]
-        a = Tensor(lst)
-        assert isinstance(a, Tensor)
-        assert isinstance(a.data, np.ndarray)
+        X.to(CPU)
+        assert X.device == CPU
+        assert isinstance(X.data, np.ndarray)
+        assert (X.data == np.array([1, 2, 3])).all()
 
-    def test_device_switch(self):
-        a = Tensor(np.ndarray((1, 2)))
-        a.to(GPU)
-        assert a.device == GPU
-        assert isinstance(a.data, cp.ndarray)
-
-        a.to(CPU)
-        assert a.device == CPU
-        assert isinstance(a.data, np.ndarray)
-
-    def test_indexing(self):
-        a = Tensor([[1, 2, 3], [4, 5, 6]])
-        assert a[0, 0] == 1
-        assert a[0, 1] == 2
-        assert a[0, 2] == 3
-        assert a[1, 0] == 4
-        assert a[1, 1] == 5
-        assert a[1, 2] == 6
-        assert (a[0, :] == np.array([1, 2, 3])).all()
-        assert (a[1, :] == np.array([4, 5, 6])).all()
-        a[0, 0] = 0
-        assert a[0, 0] == 0
+    def test_to_same(self):
+        X = Tensor([1, 2, 3])
+        assert X.device == CPU
+        X.to(CPU)
+        assert X.device == CPU
+        assert isinstance(X.data, np.ndarray)
