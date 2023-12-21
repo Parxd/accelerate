@@ -8,4 +8,5 @@ def zeros(shape):
 
 
 def ones(shape):
-    return Tensor(np.ones(shape))
+    return Tensor(np.ones(shape),
+                  )

@@ -40,8 +40,28 @@ class TestTensorMethods:
         assert b.shape == (3, 2)
         assert b.data.shape == (3, 2)
 
+    def test_datatype_cpu(self):
+        a = Tensor([[1, 2, 3]])
+        assert a.datatype == np.float64
+        assert a.data.dtype == np.float64
+        a.datatype = np.float32
+        assert a.data.dtype == np.float32
+        a.datatype = np.float16
+        assert a.data.dtype == np.float16
+
+    def test_datatype_gpu(self):
+        a = Tensor([1, 2, 3])
+        a.to(DEVICE.GPU)
+        assert a.datatype == np.float64
+        # cupy array datatype is both numpy and cupy datatype
+        assert a.data.dtype == np.float64
+        assert a.data.dtype == cp.float64
+        # cannot modify dtype of cupy array
+        with pytest.raises(AttributeError, match="cannot modify datatype of Tensor on GPU"):
+            a.datatype = np.float32
+
     def test_unwriteables(self):
-        # Tensor.data, size, dims, device unwriteable attributes
+        # Tensor.data, size, dims, device are unwriteables
         a = Tensor([1, 2, 3])
         with pytest.raises(AttributeError):
             a.data = [4, 5, 6]

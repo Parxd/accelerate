@@ -3,19 +3,18 @@ from typing import Any, List
 from enum import Enum
 import cupy as cp
 import numpy as np
-from auto.math.tensor.add import add
 
 ScalarType = int | float
 PrimType = ScalarType | List
 ArrayType = np.ndarray | cp.ndarray
-TensorType = np.ndarray | cp.ndarray | PrimType
+TensorType = ArrayType | PrimType
 
 
 def check_data(data: Any):
     if not isinstance(data, TensorType):
         raise TypeError("Tensor must be initialized from int, float, List, np.ndarray, or cp.ndarray")
     if isinstance(data, PrimType):
-        return np.array(data)
+        return np.array(data, dtype=np.float64)
     return data
 
 
@@ -55,7 +54,17 @@ class Tensor:
     def data(self, data):
         raise AttributeError("data is not a writeable attribute")
 
-    # np/cp.array attribute getters/setters
+    @property
+    def requires_grad(self):
+        return self._requires_grad
+
+    @requires_grad.setter
+    def requires_grad(self, requires_grad):
+        if not isinstance(requires_grad, bool):
+            raise TypeError("requires_grad must be of type bool")
+        self._requires_grad = requires_grad
+
+    # np/cp.array attributes
     @property
     def size(self):
         return self._size
@@ -87,8 +96,11 @@ class Tensor:
 
     @datatype.setter
     def datatype(self, datatype):
-        self._datatype = datatype
-        self.data.dtype = datatype
+        if self.device == DEVICE.CPU:
+            self._datatype = datatype
+            self.data.dtype = datatype
+        else:
+            raise AttributeError("cannot modify datatype of Tensor on GPU")
 
     @property
     def device(self):
@@ -132,7 +144,7 @@ class Tensor:
     def __add__(self, other):
         other = self._convert_to_operable(other)
         self._check_devices(other)
-        return Tensor(add(self.data, other.data))
+        # return core.add(self, other)
 
     def _convert_to_operable(self,
                              other):
