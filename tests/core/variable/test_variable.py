@@ -1,6 +1,6 @@
 import pytest
 from core.variable import Variable
-from auto.math.add import AddBackward
+from auto.variable.add import AddBackward
 
 
 class TestVariable:

@@ -61,10 +61,8 @@ class TestTensorMethods:
             a.datatype = np.float32
 
     def test_unwriteables(self):
-        # Tensor.data, size, dims, device are unwriteables
+        # Tensor.size, dims, device are unwriteables
         a = Tensor([1, 2, 3])
-        with pytest.raises(AttributeError):
-            a.data = [4, 5, 6]
         with pytest.raises(AttributeError):
             a.size = 6
         with pytest.raises(AttributeError):

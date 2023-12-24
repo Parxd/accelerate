@@ -1,4 +1,4 @@
-from auto.math.backward_base import BackwardBase
+from auto.variable.backward_base import BackwardBase
 from auto.gradient_context import GradientContext
 
 

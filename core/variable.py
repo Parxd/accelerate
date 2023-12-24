@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Callable, List, Type
-from auto.math import *
+from auto.variable import *
 from auto.gradient_context import GradientContext
 
 
@@ -82,7 +82,7 @@ class Variable:
         return self.__truediv__(other)
 
     def __pow__(self, other, modulo=None):
-        return self._binary_op(other, power, PowBackward)
+        ...
 
     def sigmoid(self):
         return self._unary_op(sigmoid, SigmoidBackward)
