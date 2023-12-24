@@ -1,10 +1,9 @@
 from __future__ import annotations
 from typing import Any, List, Optional
-from enum import Enum
 import warnings
 import cupy as cp
 import numpy as np
-from auto.tensor.add import add, AddBackward
+from auto.tensor.sum import SumBackward
 
 ScalarType = int | float
 PrimType = ScalarType | List
@@ -20,15 +19,19 @@ def check_data(data: Any):
     return data
 
 
-class DEVICE(Enum):
-    CPU = 0
-    GPU = 1
+def convert_to_operable(other):
+    if isinstance(other, Tensor):
+        return other
+    if isinstance(other, ScalarType):
+        return Tensor(np.array(other))
+    elif isinstance(other, ArrayType):
+        return Tensor(other)
+    raise TypeError(f"unsupported operand type(s) for Tensor and {type(other)}")
 
 
 class Tensor:
     def __init__(self,
                  data: TensorType,
-                 grad: Optional[Tensor] = None,
                  requires_grad: bool = False,
                  grad_fn=None,
                  children=None,
@@ -36,7 +39,7 @@ class Tensor:
         if children is None:
             children = []
         self._data: np.ndarray | cp.ndarray = check_data(data)
-        self._grad = grad
+        self._grad: Optional[Tensor] = None
         self._requires_grad = requires_grad
         self._grad_fn = grad_fn
         self._children = children
@@ -46,7 +49,8 @@ class Tensor:
         self._shape = self.data.shape
         self._dims = self.data.ndim
         self._datatype = self.data.dtype
-        self._device = DEVICE.CPU if isinstance(self.data, np.ndarray) else DEVICE.GPU
+        if self._requires_grad:
+            self._grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
 
     def reshape(self, dims):
         return Tensor(self.data.reshape(dims))
@@ -54,16 +58,6 @@ class Tensor:
     def resize(self, dims):
         self.data.resize(dims)
         self.shape = self.data.shape
-
-    def to(self,
-           device: DEVICE):
-        if self.device == device:
-            return
-        if device == DEVICE.CPU:
-            self._data = self._data.get()
-        else:
-            self._data = cp.array(self._data)
-        self._device = device
 
     def backward(self,
                  grad: Optional[Tensor] = None):
@@ -73,14 +67,15 @@ class Tensor:
                     raise RuntimeError("grad can be implicitly created only for scalar outputs")
                 else:
                     grad = Tensor(1)
-            self.grad.data += grad
+            self.grad.data += grad.data
             if not self.leaf:
-                ...
+                gradient = self.grad_fn.compute_grad(grad.data)
+                self.children[0].backward(gradient)
         else:
-            warnings.warn(".backward() called on a Tensor with requires_grad=False")
+            warnings.warn(".backward() called on Tensor with requires_grad=False")
 
     def __str__(self):
-        return f"Tensor(data={self.data}, device={self.device})"
+        return f"Tensor(data={self.data})"
 
     def __getitem__(self, item):
         return self.data[item]
@@ -89,33 +84,21 @@ class Tensor:
         self.data[key] = value
 
     def __eq__(self, other):
-        return ((self.data == other.data).all() and self.size == other.size and
+        return (np.array_equal(self.data, other.data) and self.size == other.size and
                 self.shape == other.shape and self.dims == other.dims and
-                self.datatype == other.datatype and self.device == other.device)
+                self.datatype == other.datatype)
 
     # operations
     def sum(self):
-        ...
+        res = SumBackward(self.data, Tensor(0))
+        return Tensor(data=res.data,
+                      requires_grad=self.requires_grad,
+                      grad_fn=res,
+                      children=[self],
+                      leaf=False)
 
     def __add__(self, other):
-        other = self._convert_to_operable(other)
-        self._check_devices(other)
-
-    def _convert_to_operable(self,
-                             other):
-        if isinstance(other, Tensor):
-            return other
-        array_type = np.array if self.device == DEVICE.CPU else cp.array
-        if isinstance(other, ScalarType):
-            return Tensor(array_type(other))
-        elif isinstance(other, ArrayType):
-            return Tensor(other)
-        raise TypeError(f"unsupported operand type(s) for Tensor and {type(other)}")
-
-    def _check_devices(self,
-                       other: Tensor):
-        if self.device != other.device:
-            raise TypeError(f"Tensor device mismatch, found {self.device} and {other.device}")
+        other = convert_to_operable(other)
 
     @property
     def data(self):
@@ -125,12 +108,10 @@ class Tensor:
     def data(self, data):
         if not isinstance(data, np.ndarray):
             raise TypeError("data must be of type np.ndarray")
-        if self.device == DEVICE.CPU:
-            self._data = data
-        else:
-            self._data = cp.array(data)
+        self._data = data
         self._size = self.data.size
         self._shape = self.data.shape
+        self._dims = self.data.ndim
         self._datatype = self.data.dtype
 
     @property
@@ -211,16 +192,5 @@ class Tensor:
 
     @datatype.setter
     def datatype(self, datatype):
-        if self.device == DEVICE.CPU:
-            self._datatype = datatype
-            self.data.dtype = datatype
-        else:
-            raise AttributeError("cannot modify datatype of Tensor on GPU")
-
-    @property
-    def device(self):
-        return self._device
-
-    @device.setter
-    def device(self, device):
-        raise AttributeError("device is not a writeable attribute; use Tensor.to() instead")
+        self._datatype = datatype
+        self.data.dtype = datatype
