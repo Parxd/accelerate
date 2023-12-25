@@ -1,30 +1,28 @@
 from __future__ import annotations
 from typing import Any, List, Optional
 import warnings
-import cupy as cp
 import numpy as np
-from auto.tensor.sum import SumBackward
+from auto.tensor import *
 
 ScalarType = int | float
 PrimType = ScalarType | List
-ArrayType = np.ndarray | cp.ndarray
-TensorType = PrimType | ArrayType
+TensorType = PrimType | np.ndarray
 
 
-def check_data(data: Any):
+def convert_to_array(data: Any):
     if not isinstance(data, TensorType):
-        raise TypeError("Tensor must be initialized from int, float, List, np.ndarray, or cp.ndarray")
+        raise TypeError("Tensor must be initialized from int, float, List, np.ndarray")
     if isinstance(data, PrimType):
         return np.array(data, dtype=np.float64)
     return data
 
 
-def convert_to_operable(other):
+def convert_to_operable(other: Any):
     if isinstance(other, Tensor):
         return other
     if isinstance(other, ScalarType):
         return Tensor(np.array(other))
-    elif isinstance(other, ArrayType):
+    elif isinstance(other, np.ndarray):
         return Tensor(other)
     raise TypeError(f"unsupported operand type(s) for Tensor and {type(other)}")
 
@@ -38,13 +36,13 @@ class Tensor:
                  leaf=True):
         if children is None:
             children = []
-        self._data: np.ndarray | cp.ndarray = check_data(data)
+        self._data: np.ndarray = convert_to_array(data)
         self._grad: Optional[Tensor] = None
         self._requires_grad = requires_grad
         self._grad_fn = grad_fn
         self._children = children
         self._leaf = leaf
-        # np/cp.array attributes
+        # np.array attributes
         self._size = self.data.size
         self._shape = self.data.shape
         self._dims = self.data.ndim
@@ -63,14 +61,16 @@ class Tensor:
                  grad: Optional[Tensor] = None):
         if self.requires_grad:
             if grad is None:
-                if self.shape != ():
+                if self.dims != 0:
                     raise RuntimeError("grad can be implicitly created only for scalar outputs")
                 else:
                     grad = Tensor(1)
             self.grad.data += grad.data
             if not self.leaf:
-                gradient = self.grad_fn.compute_grad(grad.data)
-                self.children[0].backward(gradient)
+                gradients = self.grad_fn(self.grad.data)
+                for child, gradient in zip(self.children, gradients):
+                    if gradient is not None:
+                        child.backward(gradient)
         else:
             warnings.warn(".backward() called on Tensor with requires_grad=False")
 
@@ -89,17 +89,23 @@ class Tensor:
                 self.datatype == other.datatype)
 
     # operations
-    def sum(self):
-        res = SumBackward(self.data, Tensor(0))
-        return Tensor(data=res.data,
+    def _handle_op(self, backward, children):
+        return Tensor(data=backward.data,
                       requires_grad=self.requires_grad,
-                      grad_fn=res,
-                      children=[self],
+                      grad_fn=backward,
+                      children=children,
                       leaf=False)
 
-    def __add__(self, other):
-        other = convert_to_operable(other)
+    def sum(self):
+        return self._handle_op(SumBackward(self.data), [self])
 
+    def __add__(self, other):
+        return self._handle_op(AddBackward(self.data, other.data), [self, other])
+
+    def __mul__(self, other):
+        return self._handle_op(MulBackward(self.data, other.data), [self, other])
+
+    # attributes
     @property
     def data(self):
         return self._data

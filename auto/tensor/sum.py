@@ -3,16 +3,14 @@ import numpy as np
 
 class SumBackward:
     def __init__(self,
-                 tensor: np.ndarray,
-                 grad):
-        self.child = tensor
-        self.data = tensor_sum(tensor)
-        self.grad = grad
+                 child: np.ndarray):
+        self.child = child
+        self.data = tensor_sum(child)
 
-    @staticmethod
-    def compute_grad(grad):
+    def __call__(self,
+                 grad: np.ndarray):
         return grad
 
 
-def tensor_sum(tensor):
+def tensor_sum(tensor: np.ndarray):
     return tensor.sum()
