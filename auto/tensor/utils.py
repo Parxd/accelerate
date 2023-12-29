@@ -1,7 +1,11 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import numpy as np
+if TYPE_CHECKING:
+    from core.tensor import Tensor
 
 
-def handle_broadcast(tensor: np.ndarray,
+def handle_broadcast(tensor: Tensor,
                      grad: np.ndarray):
     """
     Handles gradient summing when broadcasting np.ndarray

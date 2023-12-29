@@ -2,11 +2,25 @@ from __future__ import annotations
 from typing import Any, List, Optional
 import warnings
 import numpy as np
-from auto.tensor import *
 
 ScalarType = int | float
 PrimType = ScalarType | List
 TensorType = PrimType | np.ndarray
+
+
+def handle_broadcast(tensor: Tensor,
+                     grad: np.ndarray):
+    """
+    Handles gradient summing when broadcasting np.ndarray
+    Use with all binary operations that support broadcasting
+    """
+    dims_added = grad.ndim - tensor.data.ndim
+    for _ in range(dims_added):
+        grad = grad.sum(axis=0)
+    for i, dim in enumerate(tensor.shape):
+        if dim == 1:
+            grad = grad.sum(axis=i, keepdims=True)
+    return grad
 
 
 def convert_to_array(data: Any):
@@ -89,21 +103,25 @@ class Tensor:
                 self.datatype == other.datatype)
 
     # operations
-    def _handle_op(self, backward, children):
-        return Tensor(data=backward.data,
-                      requires_grad=self.requires_grad,
-                      grad_fn=backward,
-                      children=children,
-                      leaf=False)
-
     def sum(self):
-        return self._handle_op(SumBackward(self.data), [self])
+        return Tensor(self.data.sum(),
+                      self.requires_grad,
+                      )
+
+    def __neg__(self):
+        ...
 
     def __add__(self, other):
-        return self._handle_op(AddBackward(self.data, other.data), [self, other])
+        ...
+
+    def __sub__(self, other):
+        ...
 
     def __mul__(self, other):
-        return self._handle_op(MulBackward(self.data, other.data), [self, other])
+        ...
+
+    def __truediv__(self, other):
+        ...
 
     # attributes
     @property

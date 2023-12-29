@@ -5,16 +5,16 @@ if TYPE_CHECKING:
     from core.tensor import Tensor
 
 
-class SumBackward:
+class NegBackward:
     def __init__(self,
                  child: Tensor):
         self.child = child
-        self.data = tensor_sum(child)
+        self.data = neg(child)
 
     def __call__(self,
                  grad: np.ndarray):
-        return (grad,)
+        return (-grad,)
 
 
-def tensor_sum(tensor: Tensor):
-    return tensor.data.sum()
+def neg(tensor: Tensor):
+    return -tensor.data
