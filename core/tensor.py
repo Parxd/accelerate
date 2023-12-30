@@ -86,8 +86,9 @@ class Tensor:
                     if gradient is not None:
                         child.backward(gradient)
         else:
+            print(self.data)
             warnings.warn(".backward() called on Tensor with requires_grad=False")
-
+    
     def __str__(self):
         return f"Tensor(data={self.data})"
 
@@ -104,24 +105,70 @@ class Tensor:
 
     # operations
     def sum(self):
-        return Tensor(self.data.sum(),
+        data = self.data.sum()
+        def sum_grad(grad):
+            return (grad,)
+        return Tensor(data,
                       self.requires_grad,
-                      )
+                      sum_grad,
+                      [self],
+                      False)
+
+    def exp(self):
+        data = np.exp(self.data)
+        def exp_grad(grad):
+            return (grad * data,)
+        return Tensor(data,
+                      self.requires_grad,
+                      exp_grad,
+                      [self],
+                      False)
 
     def __neg__(self):
-        ...
+        data = -self.data
+        def neg_grad(grad):
+            return (-grad,)
+        return Tensor(data,
+                      self.requires_grad,
+                      neg_grad,
+                      [self],
+                      False)
 
     def __add__(self, other):
-        ...
+        data = self.data + other.data
+        def add_grad(grad):
+            return (grad, grad)
+        return Tensor(data,
+                      self.requires_grad or other.requires_grad,
+                      add_grad,
+                      [self, other],
+                      False)
 
     def __sub__(self, other):
-        ...
+        return self + -other
 
     def __mul__(self, other):
-        ...
+        data = self.data * other.data
+        def mul_grad(grad):
+            return (grad * other.data, grad * self.data)
+        return Tensor(data,
+                      self.requires_grad or other.requires_grad,
+                      mul_grad,
+                      [self, other],
+                      False)
 
     def __truediv__(self, other):
-        ...
+        data = self.data / other.data
+        def div_grad(grad):
+            return (grad / other.data, -grad * self.data / other.data ** 2)
+        return Tensor(data,
+                      self.requires_grad or other.requires_grad,
+                      div_grad,
+                      [self, other],
+                      False)
+
+    def sigmoid(self):
+        return Tensor(1) / (Tensor(1) + (-self).exp())
 
     # attributes
     @property
@@ -165,7 +212,6 @@ class Tensor:
 
     @grad_fn.setter
     def grad_fn(self, grad_fn):
-        # check if Type[Backward]
         warnings.warn("modifying grad_fn will likely break auto-differentiation")
         self._grad_fn = grad_fn
 
