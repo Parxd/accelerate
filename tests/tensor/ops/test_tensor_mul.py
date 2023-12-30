@@ -18,10 +18,8 @@ class TestTensorMul:
         Y = Tensor([[1, 2],
                     [3, 4]], requires_grad=True)
         Z = (X * Y).sum()
-        Z.backward(Tensor([[1, 1],
-                           [1, 1]]))
-        assert Z.data == np.array([[1, 4]],
-                                  [9, 16])
+        Z.backward()
+        assert np.array_equal(Z.data, np.array(30))
         assert np.array_equal(X.grad.data, np.array([]))
         assert np.array_equal(Y.grad.data, np.array([]))
 

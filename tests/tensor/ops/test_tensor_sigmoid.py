@@ -9,4 +9,3 @@ class TestTensorSigmoid:
         assert np.allclose(Y.data, np.array(0.6224593312018959))
         Y.backward()
         assert np.allclose(X.grad.data, np.array(0.23500371220158436))
-        print(X.grad.data)

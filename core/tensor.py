@@ -1,26 +1,12 @@
 from __future__ import annotations
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional
 import warnings
 import numpy as np
+from .autograd import *
 
 ScalarType = int | float
 PrimType = ScalarType | List
 TensorType = PrimType | np.ndarray
-
-
-def handle_broadcast(tensor: Tensor,
-                     grad: np.ndarray):
-    """
-    Handles gradient summing when broadcasting np.ndarray
-    Use with all binary operations that support broadcasting
-    """
-    dims_added = grad.ndim - tensor.data.ndim
-    for _ in range(dims_added):
-        grad = grad.sum(axis=0)
-    for i, dim in enumerate(tensor.shape):
-        if dim == 1:
-            grad = grad.sum(axis=i, keepdims=True)
-    return grad
 
 
 def convert_to_array(data: Any):
@@ -45,9 +31,9 @@ class Tensor:
     def __init__(self,
                  data: TensorType,
                  requires_grad: bool = False,
-                 grad_fn=None,
-                 children=None,
-                 leaf=True):
+                 grad_fn: Callable = None,
+                 children: List[Tensor] = None,
+                 leaf: bool = True):
         if children is None:
             children = []
         self._data: np.ndarray = convert_to_array(data)
@@ -86,7 +72,6 @@ class Tensor:
                     if gradient is not None:
                         child.backward(gradient)
         else:
-            print(self.data)
             warnings.warn(".backward() called on Tensor with requires_grad=False")
     
     def __str__(self):
@@ -103,72 +88,49 @@ class Tensor:
                 self.shape == other.shape and self.dims == other.dims and
                 self.datatype == other.datatype)
 
-    # operations
-    def sum(self):
-        data = self.data.sum()
-        def sum_grad(grad):
-            return (grad,)
-        return Tensor(data,
+    def _unary_op(self, grad_type):
+        grad = grad_type(self.data)
+        return Tensor(grad.data,
                       self.requires_grad,
-                      sum_grad,
+                      grad,
                       [self],
                       False)
+
+    def _binary_op(self, other, grad_type):
+        grad = grad_type(self.data, other.data)
+        return Tensor(grad.data,
+                      (self.requires_grad or other.requires_grad),
+                      grad,
+                      [self, other],
+                      False)
+
+    # primitive ops.
+    def sum(self):
+        return self._unary_op(Sum)
 
     def exp(self):
-        data = np.exp(self.data)
-        def exp_grad(grad):
-            return (grad * data,)
-        return Tensor(data,
-                      self.requires_grad,
-                      exp_grad,
-                      [self],
-                      False)
+        return self._unary_op(Exp)
 
     def __neg__(self):
-        data = -self.data
-        def neg_grad(grad):
-            return (-grad,)
-        return Tensor(data,
-                      self.requires_grad,
-                      neg_grad,
-                      [self],
-                      False)
+        return self._unary_op(Neg)
 
     def __add__(self, other):
-        data = self.data + other.data
-        def add_grad(grad):
-            return (grad, grad)
-        return Tensor(data,
-                      self.requires_grad or other.requires_grad,
-                      add_grad,
-                      [self, other],
-                      False)
+        return self._binary_op(other, Add)
 
     def __sub__(self, other):
-        return self + -other
+        return self._binary_op(other, Sub)
 
     def __mul__(self, other):
-        data = self.data * other.data
-        def mul_grad(grad):
-            return (grad * other.data, grad * self.data)
-        return Tensor(data,
-                      self.requires_grad or other.requires_grad,
-                      mul_grad,
-                      [self, other],
-                      False)
+        return self._binary_op(other, Mul)
 
     def __truediv__(self, other):
-        data = self.data / other.data
-        def div_grad(grad):
-            return (grad / other.data, -grad * self.data / other.data ** 2)
-        return Tensor(data,
-                      self.requires_grad or other.requires_grad,
-                      div_grad,
-                      [self, other],
-                      False)
+        return self._binary_op(other, Div)
 
+    # compound ops.
     def sigmoid(self):
-        return Tensor(1) / (Tensor(1) + (-self).exp())
+        tensor = Tensor(1) / (Tensor(1) + (-self).exp())
+        tensor._requires_grad = self.requires_grad
+        return tensor
 
     # attributes
     @property
