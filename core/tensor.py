@@ -72,8 +72,8 @@ class Tensor:
                     if gradient is not None:
                         child.backward(gradient)
         else:
-            warnings.warn(".backward() called on Tensor with requires_grad=False")
-    
+            raise RuntimeError(".backward() run on Tensor with requires_grad=False")
+
     def __str__(self):
         return f"Tensor(data={self.data})"
 
@@ -89,30 +89,48 @@ class Tensor:
                 self.datatype == other.datatype)
 
     def _unary_op(self, grad_type):
-        grad = grad_type(self.data)
-        return Tensor(grad.data,
+        grad_fn = grad_type(self.data)
+        return Tensor(grad_fn.data,
                       self.requires_grad,
-                      grad,
+                      grad_fn,
                       [self],
                       False)
 
     def _binary_op(self, other, grad_type):
-        grad = grad_type(self.data, other.data)
-        return Tensor(grad.data,
+        grad_fn = grad_type(self.data, other.data)
+        return Tensor(grad_fn.data,
                       (self.requires_grad or other.requires_grad),
-                      grad,
+                      grad_fn,
                       [self, other],
                       False)
 
     # primitive ops.
     def sum(self):
         return self._unary_op(Sum)
+    
+    def __neg__(self):
+        return self._unary_op(Neg)
 
     def exp(self):
         return self._unary_op(Exp)
+    
+    def log(self):
+        return self._unary_op(Log)
 
-    def __neg__(self):
-        return self._unary_op(Neg)
+    def square(self):
+        return self._unary_op(Square)
+
+    def sqrt(self):
+        return self._unary_op(Sqrt)
+
+    def sin(self):
+        return self._unary_op(Sin)
+    
+    def cos(self):
+        return self._unary_op(Cos)
+    
+    def tan(self):
+        return self._unary_op(Tan)
 
     def __add__(self, other):
         return self._binary_op(other, Add)
@@ -125,12 +143,13 @@ class Tensor:
 
     def __truediv__(self, other):
         return self._binary_op(other, Div)
+    
+    def __matmul__(self, other):
+        return self._binary_op(other, MatMul)
 
     # compound ops.
     def sigmoid(self):
-        tensor = Tensor(1) / (Tensor(1) + (-self).exp())
-        tensor._requires_grad = self.requires_grad
-        return tensor
+        return Tensor(1, self.requires_grad) / (Tensor(1, self.requires_grad) + (-self).exp())
 
     # attributes
     @property
@@ -151,42 +170,17 @@ class Tensor:
     def grad(self):
         return self._grad
 
-    @grad.setter
-    def grad(self, grad):
-        if not isinstance(grad, Tensor):
-            raise TypeError("grad must be of type Tensor")
-        warnings.warn("modifying grad will likely break auto-differentiation")
-        self._grad = grad
-
     @property
     def requires_grad(self):
         return self._requires_grad
-
-    @requires_grad.setter
-    def requires_grad(self, requires_grad):
-        if not isinstance(requires_grad, bool):
-            raise TypeError("requires_grad must be of type bool")
-        self._requires_grad = requires_grad
 
     @property
     def grad_fn(self):
         return self._grad_fn
 
-    @grad_fn.setter
-    def grad_fn(self, grad_fn):
-        warnings.warn("modifying grad_fn will likely break auto-differentiation")
-        self._grad_fn = grad_fn
-
     @property
     def children(self):
         return self._children
-
-    @children.setter
-    def children(self, children):
-        if not isinstance(children, List):
-            raise TypeError("children must be of type List[Tensor]")
-        warnings.warn("modifying children will likely break auto-differentiation")
-        self._children = children
 
     @property
     def leaf(self):
