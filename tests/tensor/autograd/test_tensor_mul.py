@@ -20,8 +20,10 @@ class TestTensorMul:
         Z = (X * Y).sum()
         Z.backward()
         assert np.array_equal(Z.data, np.array(30))
-        assert np.array_equal(X.grad.data, np.array([]))
-        assert np.array_equal(Y.grad.data, np.array([]))
+        assert np.array_equal(X.grad.data, np.array([[1, 2],
+                                                     [3, 4]]))
+        assert np.array_equal(Y.grad.data, np.array([[1, 2],
+                                                     [3, 4]]))
 
     def test_mul_3(self):
         ...

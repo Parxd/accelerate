@@ -75,6 +75,7 @@ class TestTensorAdd:
                     [4, 5, 6],
                     [7, 8, 9]], requires_grad=True)
         Z = (X + Y).sum()
+        Z.backward()
         assert Z.data == np.array(63)
         assert np.array_equal(X.grad.data, np.array([3, 3, 3]))
         assert np.array_equal(Y.grad.data, np.ones_like(Y.grad.data))

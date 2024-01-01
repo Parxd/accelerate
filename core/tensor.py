@@ -1,6 +1,5 @@
 from __future__ import annotations
-from typing import Any, Callable, List, Optional
-import warnings
+from typing import Any, Callable, List, Optional, Tuple
 import numpy as np
 from .autograd import *
 
@@ -11,7 +10,7 @@ TensorType = PrimType | np.ndarray
 
 def convert_to_array(data: Any):
     if not isinstance(data, TensorType):
-        raise TypeError("Tensor must be initialized from int, float, List, np.ndarray")
+        raise TypeError("Tensor must be initialized from int, float, List, or np.ndarray")
     if isinstance(data, PrimType):
         return np.array(data, dtype=np.float64)
     return data
@@ -50,6 +49,10 @@ class Tensor:
         if self._requires_grad:
             self._grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
 
+    @classmethod
+    def random(cls, shape: Tuple):
+        return cls(np.random.rand(shape))
+
     def reshape(self, dims):
         return Tensor(self.data.reshape(dims))
 
@@ -61,7 +64,7 @@ class Tensor:
                  grad: Optional[Tensor] = None):
         if self.requires_grad:
             if grad is None:
-                if self.dims != 0:
+                if self._dims != 0:
                     raise RuntimeError("grad can be implicitly created only for scalar outputs")
                 else:
                     grad = Tensor(1)
@@ -69,7 +72,7 @@ class Tensor:
             if not self.leaf:
                 gradients = self.grad_fn(self.grad.data)
                 for child, gradient in zip(self.children, gradients):
-                    if gradient is not None:
+                    if gradient is not None and child.requires_grad is True:
                         child.backward(gradient)
         else:
             raise RuntimeError(".backward() run on Tensor with requires_grad=False")
@@ -107,45 +110,51 @@ class Tensor:
     # primitive ops.
     def sum(self):
         return self._unary_op(Sum)
-    
     def __neg__(self):
         return self._unary_op(Neg)
-
     def exp(self):
         return self._unary_op(Exp)
-    
     def log(self):
         return self._unary_op(Log)
-
     def square(self):
         return self._unary_op(Square)
-
     def sqrt(self):
         return self._unary_op(Sqrt)
-
     def sin(self):
         return self._unary_op(Sin)
-    
     def cos(self):
         return self._unary_op(Cos)
-    
     def tan(self):
         return self._unary_op(Tan)
+    def arcsin(self):
+        return self._unary_op(Arcsin)
+    def arccos(self):
+        return self._unary_op(Arccos)
+    def arctanh(self):
+        return self._unary_op(Arctan)
+    def sinh(self):
+        return self._unary_op(Sinh)
+    def cosh(self):
+        return self._unary_op(Cosh)
+    def tanh(self):
+        return self._unary_op(Tanh)
+    def arcsinh(self):
+        return self._unary_op(Arcsinh)
+    def arccosh(self):
+        return self._unary_op(Arccosh)
+    def arctanh(self):
+        return self._unary_op(Arctanh)
 
     def __add__(self, other):
-        return self._binary_op(other, Add)
-
+        return self._binary_op(convert_to_operable(other), Add)
     def __sub__(self, other):
-        return self._binary_op(other, Sub)
-
+        return self._binary_op(convert_to_operable(other), Sub)
     def __mul__(self, other):
-        return self._binary_op(other, Mul)
-
+        return self._binary_op(convert_to_operable(other), Mul)
     def __truediv__(self, other):
-        return self._binary_op(other, Div)
-    
+        return self._binary_op(convert_to_operable(other), Div)
     def __matmul__(self, other):
-        return self._binary_op(other, MatMul)
+        return self._binary_op(convert_to_operable(other), MatMul)
 
     # compound ops.
     def sigmoid(self):
@@ -185,38 +194,3 @@ class Tensor:
     @property
     def leaf(self):
         return self._leaf
-
-    # np/cp.array attributes
-    @property
-    def size(self):
-        return self._size
-
-    @size.setter
-    def size(self, size):
-        raise AttributeError("size is not a writeable attribute")
-
-    @property
-    def shape(self):
-        return self._shape
-
-    @shape.setter
-    def shape(self, shape):
-        self._shape = shape
-        self.data.shape = shape
-
-    @property
-    def dims(self):
-        return self._dims
-
-    @dims.setter
-    def dims(self, dims):
-        raise AttributeError("dims is not a writeable attribute")
-
-    @property
-    def datatype(self):
-        return self._datatype
-
-    @datatype.setter
-    def datatype(self, datatype):
-        self._datatype = datatype
-        self.data.dtype = datatype
