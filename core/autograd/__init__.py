@@ -4,6 +4,7 @@ from .exp import Exp
 from .log import Log
 from. square import Square
 from .sqrt import Sqrt
+from .mean import Mean
 
 from .sin import Sin
 from .cos import Cos

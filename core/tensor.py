@@ -1,11 +1,15 @@
 from __future__ import annotations
 from typing import Any, Callable, List, Optional, Tuple
 import numpy as np
+import matplotlib.pyplot as plt
 from .autograd import *
 
 ScalarType = int | float
 PrimType = ScalarType | List
 TensorType = PrimType | np.ndarray
+
+
+binary_ops = [np.add, np.subtract, np.multiply, np.divide, np.true_divide, np.matmul]
 
 
 def convert_to_array(data: Any):
@@ -51,17 +55,16 @@ class Tensor:
 
     @classmethod
     def random(cls, shape: Tuple):
-        return cls(np.random.rand(shape))
+        return cls(np.random.uniform(0, 3, shape), requires_grad=True)
 
-    def reshape(self, dims):
-        return Tensor(self.data.reshape(dims))
+    def reshape(self, shape: Tuple):
+        return Tensor(self.data.reshape(shape))
 
-    def resize(self, dims):
-        self.data.resize(dims)
+    def resize(self, shape: Tuple):
+        self.data.resize(shape)
         self.shape = self.data.shape
 
-    def backward(self,
-                 grad: Optional[Tensor] = None):
+    def backward(self, grad: Optional[Tensor] = None):
         if self.requires_grad:
             if grad is None:
                 if self._dims != 0:
@@ -77,8 +80,15 @@ class Tensor:
         else:
             raise RuntimeError(".backward() run on Tensor with requires_grad=False")
 
+    # for when we have (np.ndarray (op.) Tensor)
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if ufunc in binary_ops and method == '__call__':
+            # find specific ufunc in binary_ops
+            return Tensor(binary_ops[binary_ops.index(ufunc)](self.data, inputs[0]),
+                          requires_grad=self.requires_grad)
+
     def __str__(self):
-        return f"Tensor(data={self.data})"
+        return f"{self.data}\nrequires_grad={self.requires_grad}\n"
 
     def __getitem__(self, item):
         return self.data[item]
@@ -86,10 +96,16 @@ class Tensor:
     def __setitem__(self, key, value):
         self.data[key] = value
 
+    def __len__(self):
+        return len(self.data)
+    
     def __eq__(self, other):
-        return (np.array_equal(self.data, other.data) and self.size == other.size and
-                self.shape == other.shape and self.dims == other.dims and
-                self.datatype == other.datatype)
+        return (np.array_equal(self.data, other.data) and self.datatype == other.datatype)
+    
+    def plot(self, ax=None, **kwargs):
+        if ax is None:
+            ax = plt.gca()
+        ax.plot(self.data, **kwargs)
 
     def _unary_op(self, grad_type):
         grad_fn = grad_type(self.data)
@@ -120,6 +136,8 @@ class Tensor:
         return self._unary_op(Square)
     def sqrt(self):
         return self._unary_op(Sqrt)
+    def mean(self):
+        return self._unary_op(Mean)
     def sin(self):
         return self._unary_op(Sin)
     def cos(self):
@@ -147,8 +165,12 @@ class Tensor:
 
     def __add__(self, other):
         return self._binary_op(convert_to_operable(other), Add)
+    def __radd__(self, other):
+        ...
     def __sub__(self, other):
         return self._binary_op(convert_to_operable(other), Sub)
+    def __rsub__(self, other):
+        ...
     def __mul__(self, other):
         return self._binary_op(convert_to_operable(other), Mul)
     def __truediv__(self, other):
@@ -182,6 +204,12 @@ class Tensor:
     @property
     def requires_grad(self):
         return self._requires_grad
+    
+    @requires_grad.setter
+    def requires_grad(self, requires_grad):
+        if not isinstance(requires_grad, bool):
+            raise TypeError("requires_grad must be of type bool")
+        self._requires_grad = requires_grad
 
     @property
     def grad_fn(self):
