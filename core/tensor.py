@@ -55,7 +55,7 @@ class Tensor:
     def random(cls, shape: Tuple, requires_grad: bool) -> Tensor:
         return cls(np.random.rand(*shape), requires_grad=requires_grad)
 
-    def reshape(self, shape: Tuple) -> None:
+    def reshape(self, shape: Tuple) -> Tensor:
         return Tensor(self.data.reshape(shape))
 
     def resize(self, shape: Tuple) -> None:
