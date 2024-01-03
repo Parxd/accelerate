@@ -7,8 +7,6 @@ from .autograd import *
 ScalarType = int | float
 PrimType = ScalarType | List
 TensorType = PrimType | np.ndarray
-
-
 binary_ops = [np.add, np.subtract, np.multiply, np.divide, np.true_divide, np.matmul]
 
 
@@ -36,7 +34,7 @@ class Tensor:
                  requires_grad: bool = False,
                  grad_fn: Callable = None,
                  children: List[Tensor] = None,
-                 leaf: bool = True):
+                 leaf: bool = True) -> None:
         if children is None:
             children = []
         self._data: np.ndarray = convert_to_array(data)
@@ -51,20 +49,23 @@ class Tensor:
         self._dims = self.data.ndim
         self._datatype = self.data.dtype
         if self._requires_grad:
-            self._grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
+            self.clear_grad()
 
     @classmethod
-    def random(cls, shape: Tuple):
-        return cls(np.random.uniform(0, 3, shape), requires_grad=True)
+    def random(cls, shape: Tuple, requires_grad: bool) -> Tensor:
+        return cls(np.random.rand(*shape), requires_grad=requires_grad)
 
-    def reshape(self, shape: Tuple):
+    def reshape(self, shape: Tuple) -> None:
         return Tensor(self.data.reshape(shape))
 
-    def resize(self, shape: Tuple):
+    def resize(self, shape: Tuple) -> None:
         self.data.resize(shape)
-        self.shape = self.data.shape
+        self._shape = self.data.shape
 
-    def backward(self, grad: Optional[Tensor] = None):
+    def clear_grad(self) -> None:
+        self.grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
+
+    def backward(self, grad: Optional[Tensor] = None) -> None:
         if self.requires_grad:
             if grad is None:
                 if self._dims != 0:
@@ -83,12 +84,10 @@ class Tensor:
     # for when we have (np.ndarray (op.) Tensor)
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         if ufunc in binary_ops and method == '__call__':
-            # find specific ufunc in binary_ops
-            return Tensor(binary_ops[binary_ops.index(ufunc)](self.data, inputs[0]),
-                          requires_grad=self.requires_grad)
+            return self - inputs[0]  # need to implement support for other ops, probably using a hashmap
 
     def __str__(self):
-        return f"{self.data}\nrequires_grad={self.requires_grad}\n"
+        return f"{self.data}"
 
     def __getitem__(self, item):
         return self.data[item]
@@ -100,7 +99,7 @@ class Tensor:
         return len(self.data)
     
     def __eq__(self, other):
-        return (np.array_equal(self.data, other.data) and self.datatype == other.datatype)
+        return np.array_equal(self.data, other.data) and self._datatype == other._datatype
     
     def plot(self, ax=None, **kwargs):
         if ax is None:
@@ -136,8 +135,8 @@ class Tensor:
         return self._unary_op(Square)
     def sqrt(self):
         return self._unary_op(Sqrt)
-    def mean(self):
-        return self._unary_op(Mean)
+    # def mean(self):
+    #     return self._unary_op(Mean)
     def sin(self):
         return self._unary_op(Sin)
     def cos(self):
@@ -148,7 +147,7 @@ class Tensor:
         return self._unary_op(Arcsin)
     def arccos(self):
         return self._unary_op(Arccos)
-    def arctanh(self):
+    def arctan(self):
         return self._unary_op(Arctan)
     def sinh(self):
         return self._unary_op(Sinh)
@@ -167,20 +166,37 @@ class Tensor:
         return self._binary_op(convert_to_operable(other), Add)
     def __radd__(self, other):
         ...
+    def __iadd__(self, other):
+        ...
+
     def __sub__(self, other):
         return self._binary_op(convert_to_operable(other), Sub)
     def __rsub__(self, other):
         ...
+    def __isub__(self, other):
+        self.data = self.data - convert_to_operable(other).data
+        return self
+
     def __mul__(self, other):
         return self._binary_op(convert_to_operable(other), Mul)
+    def __rmul__(self, other):
+        return self.__mul__(other)
+    def __imul__(self, other):
+        ...
+
     def __truediv__(self, other):
         return self._binary_op(convert_to_operable(other), Div)
+
     def __matmul__(self, other):
         return self._binary_op(convert_to_operable(other), MatMul)
 
-    # compound ops.
+    # compound ops. (could be implemented with their known closed-form derivatives, but this is just 
+    # to see if gradients are correctly calculated w/ chain rule, since these are composition functions)
+    def mean(self):
+        return self.sum() / Tensor(len(self))
+
     def sigmoid(self):
-        return Tensor(1, self.requires_grad) / (Tensor(1, self.requires_grad) + (-self).exp())
+        return Tensor(1) / ((-self).exp() + 1)
 
     # attributes
     @property
@@ -201,15 +217,21 @@ class Tensor:
     def grad(self):
         return self._grad
 
+    @grad.setter
+    def grad(self, grad):
+        self._grad = grad
+
     @property
     def requires_grad(self):
         return self._requires_grad
-    
+
     @requires_grad.setter
     def requires_grad(self, requires_grad):
         if not isinstance(requires_grad, bool):
             raise TypeError("requires_grad must be of type bool")
         self._requires_grad = requires_grad
+        if self._requires_grad:
+            self.clear_grad()
 
     @property
     def grad_fn(self):
