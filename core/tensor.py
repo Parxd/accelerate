@@ -1,12 +1,14 @@
 from __future__ import annotations
 from typing import Any, Callable, List, Optional, Tuple
+from enum import Enum
 import numpy as np
+import cupy as cp
 import matplotlib.pyplot as plt
 from .autograd import *
 
 ScalarType = int | float
-PrimType = ScalarType | List
-TensorType = PrimType | np.ndarray
+PrimType = int | float | List
+TensorType = int | float | List | np.ndarray
 binary_ops = [np.add, np.subtract, np.multiply, np.divide, np.true_divide, np.matmul]
 
 
@@ -18,7 +20,7 @@ def convert_to_array(data: Any):
     return data
 
 
-def convert_to_operable(other: Any):
+def convert_to_operable(other: Any) -> Tensor:
     if isinstance(other, Tensor):
         return other
     if isinstance(other, ScalarType):
@@ -26,6 +28,11 @@ def convert_to_operable(other: Any):
     elif isinstance(other, np.ndarray):
         return Tensor(other)
     raise TypeError(f"unsupported operand type(s) for Tensor and {type(other)}")
+
+
+class Device(Enum):
+    CPU = 0
+    GPU = 1
 
 
 class Tensor:
@@ -37,7 +44,7 @@ class Tensor:
                  leaf: bool = True) -> None:
         if children is None:
             children = []
-        self._data: np.ndarray = convert_to_array(data)
+        self._data: np.ndarray | cp.ndarray = convert_to_array(data)
         self._grad: Optional[Tensor] = None
         self._requires_grad = requires_grad
         self._grad_fn = grad_fn
@@ -49,11 +56,16 @@ class Tensor:
         self._dims = self.data.ndim
         self._datatype = self.data.dtype
         if self._requires_grad:
-            self.clear_grad()
+            self.grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
 
     @classmethod
     def random(cls, shape: Tuple, requires_grad: bool) -> Tensor:
         return cls(np.random.rand(*shape), requires_grad=requires_grad)
+
+    def plot(self, ax=None, **kwargs):
+        if ax is None:
+            ax = plt.gca()
+        ax.plot(self.data, **kwargs)
 
     def reshape(self, shape: Tuple) -> Tensor:
         return Tensor(self.data.reshape(shape))
@@ -63,7 +75,7 @@ class Tensor:
         self._shape = self.data.shape
 
     def clear_grad(self) -> None:
-        self.grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
+        self.grad.data = np.zeros_like(self.data, dtype=np.float64)
 
     def backward(self, grad: Optional[Tensor] = None) -> None:
         if self.requires_grad:
@@ -81,8 +93,8 @@ class Tensor:
         else:
             raise RuntimeError(".backward() run on Tensor with requires_grad=False")
 
-    # for when we have (np.ndarray (op.) Tensor)
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+    # for when we have (ndarray (op.) Tensor)
+    def __array_ufunc__(self, ufunc, method, *inputs):
         if ufunc in binary_ops and method == '__call__':
             return self - inputs[0]  # need to implement support for other ops, probably using a hashmap
 
@@ -97,90 +109,109 @@ class Tensor:
 
     def __len__(self):
         return len(self.data)
-    
+
     def __eq__(self, other):
         return np.array_equal(self.data, other.data) and self._datatype == other._datatype
-    
-    def plot(self, ax=None, **kwargs):
-        if ax is None:
-            ax = plt.gca()
-        ax.plot(self.data, **kwargs)
 
     def _unary_op(self, grad_type):
         grad_fn = grad_type(self.data)
-        return Tensor(grad_fn.data,
-                      self.requires_grad,
-                      grad_fn,
-                      [self],
-                      False)
+        return Tensor(data=grad_fn.data,
+                      requires_grad=self.requires_grad,
+                      grad_fn=grad_fn,
+                      children=[self],
+                      leaf=False)
 
     def _binary_op(self, other, grad_type):
         grad_fn = grad_type(self.data, other.data)
-        return Tensor(grad_fn.data,
-                      (self.requires_grad or other.requires_grad),
-                      grad_fn,
-                      [self, other],
-                      False)
+        return Tensor(data=grad_fn.data,
+                      requires_grad=(self.requires_grad or other.requires_grad),
+                      grad_fn=grad_fn,
+                      children=[self, other],
+                      leaf=False)
 
     # primitive ops.
     def sum(self):
         return self._unary_op(Sum)
+
     def __neg__(self):
         return self._unary_op(Neg)
+
     def exp(self):
         return self._unary_op(Exp)
+
     def log(self):
         return self._unary_op(Log)
+
     def square(self):
         return self._unary_op(Square)
+
     def sqrt(self):
         return self._unary_op(Sqrt)
+
     # def mean(self):
     #     return self._unary_op(Mean)
+
     def sin(self):
         return self._unary_op(Sin)
+
     def cos(self):
         return self._unary_op(Cos)
+
     def tan(self):
         return self._unary_op(Tan)
+
     def arcsin(self):
         return self._unary_op(Arcsin)
+
     def arccos(self):
         return self._unary_op(Arccos)
+
     def arctan(self):
         return self._unary_op(Arctan)
+
     def sinh(self):
         return self._unary_op(Sinh)
+
     def cosh(self):
         return self._unary_op(Cosh)
+
     def tanh(self):
         return self._unary_op(Tanh)
+
     def arcsinh(self):
         return self._unary_op(Arcsinh)
+
     def arccosh(self):
         return self._unary_op(Arccosh)
+
     def arctanh(self):
         return self._unary_op(Arctanh)
 
     def __add__(self, other):
         return self._binary_op(convert_to_operable(other), Add)
+
     def __radd__(self, other):
         ...
+
     def __iadd__(self, other):
         ...
 
     def __sub__(self, other):
         return self._binary_op(convert_to_operable(other), Sub)
+
     def __rsub__(self, other):
         ...
+
     def __isub__(self, other):
         self.data = self.data - convert_to_operable(other).data
         return self
 
     def __mul__(self, other):
         return self._binary_op(convert_to_operable(other), Mul)
+
     def __rmul__(self, other):
         return self.__mul__(other)
+
     def __imul__(self, other):
         ...
 

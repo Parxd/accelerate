@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 from core.tensor import Tensor
 
 LR = 0.01
+EPOCHS = 500
 DATA_POINTS = 100
+PLOT = True
 
 
 def mse(y: np.ndarray, y_hat: Tensor) -> Tensor:
@@ -13,12 +15,12 @@ def mse(y: np.ndarray, y_hat: Tensor) -> Tensor:
 def main():
     x = np.arange(DATA_POINTS)
     x_normalized = (x - x.mean()) / x.std()
-    y = 1.5 * x_normalized + np.random.uniform(0, 1, (DATA_POINTS,))
+    y = 4 * x_normalized + np.random.uniform(0, 2, (DATA_POINTS,))
 
     weights = Tensor.random((1,), requires_grad=True)
     bias = Tensor.random((1,), requires_grad=True)
 
-    for i in range(500):
+    for i in range(EPOCHS):
         y_hat = weights * x_normalized + bias
         error = mse(y, y_hat)
         error.backward()
@@ -30,9 +32,10 @@ def main():
 
         print(f"iteration {i}: error={error}")
 
-    plt.plot(x_normalized, y)
-    plt.plot(x_normalized, weights * x_normalized + bias)
-    plt.show()
+    if PLOT:
+        plt.plot(x_normalized, y)
+        plt.plot(x_normalized, weights * x_normalized + bias)
+        plt.show()
     return 0
 
 
