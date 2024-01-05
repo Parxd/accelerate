@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from core.tensor import Tensor
+from nn.loss import MSELoss
 
 LR = 0.01
 EPOCHS = 500
@@ -8,21 +9,18 @@ DATA_POINTS = 100
 PLOT = True
 
 
-def mse(y: np.ndarray, y_hat: Tensor) -> Tensor:
-    return (y - y_hat).square().mean()
-
-
 def main():
     x = np.arange(DATA_POINTS)
     x_normalized = (x - x.mean()) / x.std()
     y = 4 * x_normalized + np.random.uniform(0, 2, (DATA_POINTS,))
 
+    loss = MSELoss(reduction='mean')
     weights = Tensor.random((1,), requires_grad=True)
     bias = Tensor.random((1,), requires_grad=True)
 
     for i in range(EPOCHS):
         y_hat = weights * x_normalized + bias
-        error = mse(y, y_hat)
+        error = loss(y_hat, y)
         error.backward()
 
         weights -= LR * weights.grad

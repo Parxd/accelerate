@@ -223,6 +223,9 @@ class Tensor:
 
     # compound ops. (could be implemented with their known closed-form derivatives, but this is just 
     # to see if gradients are correctly calculated w/ chain rule, since these are composition functions)
+    def abs(self):
+        return self.square().sqrt()
+
     def mean(self):
         return self.sum() / Tensor(len(self))
 
