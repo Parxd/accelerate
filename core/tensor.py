@@ -1,13 +1,11 @@
 from __future__ import annotations
 from typing import Any, Callable, List, Optional, Tuple
-from enum import Enum
 import numpy as np
-import cupy as cp
 import matplotlib.pyplot as plt
 from .autograd import *
 
 ScalarType = int | float
-PrimType = int | float | List
+PrimType   = int | float | List
 TensorType = int | float | List | np.ndarray
 binary_ops = [np.add, np.subtract, np.multiply, np.divide, np.true_divide, np.matmul]
 
@@ -30,11 +28,6 @@ def convert_to_operable(other: Any) -> Tensor:
     raise TypeError(f"unsupported operand type(s) for Tensor and {type(other)}")
 
 
-class Device(Enum):
-    CPU = 0
-    GPU = 1
-
-
 class Tensor:
     def __init__(self,
                  data: TensorType,
@@ -44,7 +37,7 @@ class Tensor:
                  leaf: bool = True) -> None:
         if children is None:
             children = []
-        self._data: np.ndarray | cp.ndarray = convert_to_array(data)
+        self._data: np.ndarray = convert_to_array(data)
         self._grad: Optional[Tensor] = None
         self._requires_grad = requires_grad
         self._grad_fn = grad_fn
@@ -148,8 +141,8 @@ class Tensor:
     def sqrt(self):
         return self._unary_op(Sqrt)
 
-    # def mean(self):
-    #     return self._unary_op(Mean)
+    def mean(self):
+        return self._unary_op(Mean)
 
     def sin(self):
         return self._unary_op(Sin)
@@ -191,19 +184,20 @@ class Tensor:
         return self._binary_op(convert_to_operable(other), Add)
 
     def __radd__(self, other):
-        ...
+        return self.__add__(other)
 
     def __iadd__(self, other):
-        ...
+        self.data += convert_to_operable(other).data
+        return self
 
     def __sub__(self, other):
         return self._binary_op(convert_to_operable(other), Sub)
 
     def __rsub__(self, other):
-        ...
+        return -self.__sub__(other)
 
     def __isub__(self, other):
-        self.data = self.data - convert_to_operable(other).data
+        self.data -= convert_to_operable(other).data
         return self
 
     def __mul__(self, other):
@@ -213,7 +207,8 @@ class Tensor:
         return self.__mul__(other)
 
     def __imul__(self, other):
-        ...
+        self.data *= convert_to_operable(other).data
+        return self
 
     def __truediv__(self, other):
         return self._binary_op(convert_to_operable(other), Div)
@@ -225,9 +220,6 @@ class Tensor:
     # to see if gradients are correctly calculated w/ chain rule, since these are composition functions)
     def abs(self):
         return self.square().sqrt()
-
-    def mean(self):
-        return self.sum() / Tensor(len(self))
 
     def sigmoid(self):
         return Tensor(1) / ((-self).exp() + 1)
