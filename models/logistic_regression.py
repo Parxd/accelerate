@@ -3,37 +3,39 @@ import matplotlib.pyplot as plt
 from core.tensor import Tensor
 from nn.loss import *
 
-
-LR = 0.01
-EPOCHS = 500
+LR = 0.1
+EPOCHS = 100
 DATA_POINTS = 100
-PLOT = True
+PLOT = False
 
 
 def main():
-    x = np.arange(1, 50)
-    y = (4 + 3 * x + np.random.randn(DATA_POINTS, 1) > 6).astype(int)
-    print(y)
+    X = np.random.randn(DATA_POINTS,)
+    y = ((1.6 * X.squeeze() + 1) + 0.2 * np.random.randn(DATA_POINTS,) > 1.5).astype(float)
 
-    loss = BCELoss()
-    weights = Tensor.random((1,), requires_grad=True)
-    bias = Tensor.random((1,), requires_grad=True)
+    criterion = BCELoss()
+    weight = Tensor(np.random.randn(1), requires_grad=True)
+    bias = Tensor(np.random.randn(1), requires_grad=True)
 
-    # for i in range(EPOCHS):
-    #     y_hat = (weights * x + bias).sigmoid()
-    #     error = loss(y_hat, y)
-    #     error.backward()
-    #
-    #     weights -= LR * weights.grad
-    #     bias -= LR * bias.grad
-    #     weights.clear_grad()
-    #     bias.clear_grad()
-    #
-    #     print(error)
+    for _ in range(EPOCHS):
+        y_hat = (weight * Tensor(X) + bias).sigmoid()
 
-    # if PLOT:
-    #     plt.plot(x)
-    #     plt.show()
+        loss = criterion(y_hat, Tensor(y))
+        loss.backward()
+
+        weight -= LR * weight.grad
+        bias -= LR * bias.grad
+        weight.clear_grad()
+        bias.clear_grad()
+        print(loss)
+
+    final = (weight * Tensor(X) + bias).sigmoid()
+    plt.scatter(X, y, color='blue')
+    plt.scatter(X, final, color='orange')
+    plt.xlabel('Independent Feature')
+    plt.ylabel('Dependent Feature (Binary)')
+    plt.title('Generated Data for Logistic Regression')
+    plt.show()
 
     return 0
 

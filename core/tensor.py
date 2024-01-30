@@ -53,7 +53,7 @@ class Tensor:
 
     @classmethod
     def random(cls, shape: Tuple, requires_grad: bool) -> Tensor:
-        return cls(np.random.rand(*shape), requires_grad=requires_grad)
+        return cls(np.random.uniform(5, 10, size=shape), requires_grad=requires_grad)
 
     def plot(self, ax=None, **kwargs):
         if ax is None:
