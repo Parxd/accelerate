@@ -14,21 +14,21 @@ def main():
     x_normalized = (x - x.mean()) / x.std()
     y = 4 * x_normalized + np.random.uniform(0, 2, (DATA_POINTS,))
 
-    loss = MSELoss(reduction='mean')
+    criterion = MSELoss(reduction='mean')
     weights = Tensor.random((1,), requires_grad=True)
     bias = Tensor.random((1,), requires_grad=True)
 
     for i in range(EPOCHS):
         y_hat = weights * x_normalized + bias
-        error = loss(y_hat, y)
-        error.backward()
+        loss = criterion(y_hat, y)
+        loss.backward()
 
         weights -= LR * weights.grad
         bias -= LR * bias.grad
         weights.clear_grad()
         bias.clear_grad()
 
-        print(f"iteration {i}: error={error}")
+        print(f"iteration {i}: error={loss}")
 
     if PLOT:
         plt.plot(x_normalized, y)

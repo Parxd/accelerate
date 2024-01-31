@@ -53,7 +53,7 @@ class Tensor:
 
     @classmethod
     def random(cls, shape: Tuple, requires_grad: bool) -> Tensor:
-        return cls(np.random.uniform(5, 10, size=shape), requires_grad=requires_grad)
+        return cls(np.random.randn(*shape), requires_grad=requires_grad)
 
     def plot(self, ax=None, **kwargs):
         if ax is None:
@@ -123,6 +123,9 @@ class Tensor:
                       leaf=False)
 
     # primitive ops.
+    def transpose(self):
+        return self._unary_op(Transpose)
+
     def sum(self):
         return self._unary_op(Sum)
 

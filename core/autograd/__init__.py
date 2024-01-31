@@ -1,3 +1,4 @@
+from .transpose import Transpose
 from .sum import Sum
 from .neg import Neg
 from .exp import Exp
