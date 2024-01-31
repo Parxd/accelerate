@@ -49,7 +49,7 @@ class Tensor:
         self._dims = self.data.ndim
         self._datatype = self.data.dtype
         if self._requires_grad:
-            self.grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
+            self._grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
 
     @classmethod
     def random(cls, shape: Tuple, requires_grad: bool) -> Tensor:
