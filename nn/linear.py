@@ -10,5 +10,5 @@ class Linear:
         self._w = Tensor.random((out_features, in_features), requires_grad=True)
         self._b = Tensor.random((1, out_features), requires_grad=True) if bias else Tensor(np.zeros(1, out_features))
 
-    def __call__(self, data):
+    def __call__(self, data: Tensor) -> Tensor:
         return data @ self._w.transpose() + self._b
