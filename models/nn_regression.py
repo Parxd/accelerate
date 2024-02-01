@@ -1,8 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from core import *
-from nn import Linear, Sigmoid
-from nn.loss import MSELoss
+from nn import loss, Linear, Sigmoid
 
 LR = 0.01
 EPOCHS = 100
@@ -21,14 +19,14 @@ def main():
     noise = np.random.randn(DATA_POINTS) * 0.1
     y = -0.6 * x_1 - 1.2 * x_2 + 0.7 * x_3 + noise
 
-    criterion = MSELoss()
+    criterion = loss.MSELoss()
     for i in range(EPOCHS):
         y_hat = layer2(act1(layer1(X)))
-        loss = criterion(y_hat, Tensor(y))
-        loss.backward()
+        error = criterion(y_hat, Tensor(y))
+        error.backward()
 
         # this is pretty bad, but just for sake of demonstration
-        # ---
+        # ------
         # we also need something like torch's "with torch.no_grad()" to prevent gradient modification from
         # subtracting the actual gradient
         layer2._w -= LR * layer2._w.grad
@@ -42,8 +40,7 @@ def main():
         layer1._b.clear_grad()
 
         if i % 10 == 0:
-            print(f"iteration {i}: error={loss}")
-
+            print(f"iteration {i}: error={error}")
     return 0
 
 

@@ -8,3 +8,6 @@ class Sigmoid:
 
     def __call__(self, data: Tensor) -> Tensor:
         return data.sigmoid()
+
+    def __str__(self):
+        return "Sigmoid()"

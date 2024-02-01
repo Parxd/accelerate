@@ -189,29 +189,33 @@ class Tensor:
     def __radd__(self, other):
         return self.__add__(other)
 
-    def __iadd__(self, other):
-        self.data += convert_to_operable(other).data
-        return self
-
     def __sub__(self, other):
         return self._binary_op(convert_to_operable(other), Sub)
 
     def __rsub__(self, other):
         return -self.__sub__(other)
+    
+    # these in-place operations don't accumulate gradients as of now
+    # this is mostly for convenience
+    # if they did accumulate gradients, we would need to make sure that no gradients are added on when we use -= for gradient descent
+    def __iadd__(self, other):
+        self.data += convert_to_operable(other).data
+        return self
 
     def __isub__(self, other):
         self.data -= convert_to_operable(other).data
         return self
+    
+    def __imul__(self, other):
+        self.data *= convert_to_operable(other).data
+        return self
+    # -------
 
     def __mul__(self, other):
         return self._binary_op(convert_to_operable(other), Mul)
 
     def __rmul__(self, other):
         return self.__mul__(other)
-
-    def __imul__(self, other):
-        self.data *= convert_to_operable(other).data
-        return self
 
     def __truediv__(self, other):
         return self._binary_op(convert_to_operable(other), Div)
