@@ -7,7 +7,6 @@ from .autograd import *
 ScalarType = int | float
 PrimType   = int | float | List
 TensorType = int | float | List | np.ndarray
-binary_ops = [np.add, np.subtract, np.multiply, np.divide, np.true_divide, np.matmul]
 
 
 def convert_to_array(data: Any):
@@ -55,19 +54,7 @@ class Tensor:
     def random(cls, shape: Tuple, requires_grad: bool) -> Tensor:
         return cls(np.random.randn(*shape), requires_grad=requires_grad)
 
-    def plot(self, ax=None, **kwargs):
-        if ax is None:
-            ax = plt.gca()
-        ax.plot(self.data, **kwargs)
-
-    def reshape(self, shape: Tuple) -> Tensor:
-        return Tensor(self.data.reshape(shape))
-
-    def resize(self, shape: Tuple) -> None:
-        self.data.resize(shape)
-        self._shape = self.data.shape
-
-    def clear_grad(self) -> None:
+    def zero_grad(self) -> None:
         self.grad.data = np.zeros_like(self.data, dtype=np.float64)
 
     def backward(self, grad: Optional[Tensor] = None) -> None:
@@ -86,10 +73,10 @@ class Tensor:
         else:
             raise RuntimeError(".backward() run on Tensor with requires_grad=False")
 
-    # for when we have (ndarray (op.) Tensor)
-    def __array_ufunc__(self, ufunc, method, *inputs):
-        if ufunc in binary_ops and method == '__call__':
-            return self - inputs[0]  # need to implement support for other ops, probably using a hashmap
+    def plot(self, ax=None, **kwargs):
+        if ax is None:
+            ax = plt.gca()
+        ax.plot(self.data, **kwargs)
 
     def __str__(self):
         return f"{self.data}"
@@ -183,6 +170,9 @@ class Tensor:
     def arctanh(self):
         return self._unary_op(Arctanh)
 
+    def relu(self):
+        return self._unary_op(ReLU)
+
     def __add__(self, other):
         return self._binary_op(convert_to_operable(other), Add)
 
@@ -197,7 +187,8 @@ class Tensor:
     
     # these in-place operations don't accumulate gradients as of now
     # this is mostly for convenience
-    # if they did accumulate gradients, we would need to make sure that no gradients are added on when we use -= for gradient descent
+    # if they did accumulate gradients, we would need to make sure that no gradients are added on when we do
+    # gradient descent
     def __iadd__(self, other):
         self.data += convert_to_operable(other).data
         return self
@@ -264,7 +255,7 @@ class Tensor:
             raise TypeError("requires_grad must be of type bool")
         self._requires_grad = requires_grad
         if self._requires_grad:
-            self.clear_grad()
+            self.zero_grad()
 
     @property
     def grad_fn(self):

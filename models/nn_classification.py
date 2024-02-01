@@ -1,24 +1,27 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import nn
 from core import *
-from nn import loss, Linear, Sigmoid
 
 LR = 0.01
-EPOCHS = 100
-DATA_POINTS = 1000
+EPOCHS = 50
+DATA_POINTS = 10000
 
 
 def main():
-    layer1 = Linear(3, 8)
-    act1 = Sigmoid()
-    layer2 = Linear(8, 1)
-    act2 = Sigmoid()
-
     x_1 = np.random.rand(DATA_POINTS)
     x_2 = np.random.rand(DATA_POINTS)
     x_3 = np.random.rand(DATA_POINTS)
 
-    criterion = loss.BCELoss
+    criterion = nn.loss.BCELoss()
+    model = nn.Sequential(
+        nn.Linear(3, 5),
+        nn.ReLU(),
+        nn.Linear(5, 6),
+        nn.ReLU(),
+        nn.Linear(6, 2),
+        nn.Sigmoid()
+    )
 
     return 0
 

@@ -19,6 +19,7 @@ from .tanh import Tanh
 from .asinh import Arcsinh
 from .acosh import Arccosh
 from .atanh import Arctanh
+from .relu import ReLU
 
 from .add import Add
 from .sub import Sub

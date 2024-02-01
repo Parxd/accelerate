@@ -25,8 +25,8 @@ def main():
 
         weight -= LR * weight.grad
         bias -= LR * bias.grad
-        weight.clear_grad()
-        bias.clear_grad()
+        weight.zero_grad()
+        bias.zero_grad()
 
         if i % 10 == 0:
             print(f"iteration {i}: error={error}")

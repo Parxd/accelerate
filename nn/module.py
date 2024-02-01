@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
+from typing import List
 from core.tensor import Tensor
 
 
 class Module(ABC):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self,
+                 *args,
+                 **kwargs) -> None:
         self._layers = []
         for arg in args:
             self._layers.append(arg)

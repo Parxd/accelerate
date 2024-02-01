@@ -3,7 +3,9 @@ from .module import Module
 
 
 class Sequential(Module):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self,
+                 *args,
+                 **kwargs) -> None:
         super().__init__(*args)
 
     def forward(self, x):

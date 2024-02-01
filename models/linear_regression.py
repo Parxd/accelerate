@@ -25,8 +25,8 @@ def main():
 
         weights -= LR * weights.grad
         bias -= LR * bias.grad
-        weights.clear_grad()
-        bias.clear_grad()
+        weights.zero_grad()
+        bias.zero_grad()
 
         print(f"iteration {i}: error={loss}")
 

@@ -1,12 +1,12 @@
 from core.tensor import Tensor
 
 
-class Sigmoid:
+class ReLU:
     def __init__(self):
         ...
 
     def __call__(self, data: Tensor) -> Tensor:
-        return data.sigmoid()
+        return data.relu()
 
     def __str__(self):
-        return "Sigmoid()"
+        return "ReLU()"
