@@ -8,7 +8,7 @@ class Sequential(Module):
                  **kwargs) -> None:
         super().__init__(*args)
 
-    def forward(self, x):
+    def __call__(self, x):
         for layer in self._layers:
             x = layer(x)
         return x

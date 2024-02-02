@@ -4,4 +4,4 @@ from .sequential import Sequential
 from .sigmoid import Sigmoid
 from .relu import ReLU
 
-import loss
+from .loss import *

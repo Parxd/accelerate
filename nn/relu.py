@@ -1,7 +1,8 @@
 from core.tensor import Tensor
+from .layer import Layer
 
 
-class ReLU:
+class ReLU(Layer):
     def __init__(self):
         ...
 
@@ -10,3 +11,6 @@ class ReLU:
 
     def __str__(self):
         return "ReLU()"
+
+    def zero_grad(self):
+        ...

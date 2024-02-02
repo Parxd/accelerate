@@ -1,7 +1,8 @@
 from core.tensor import Tensor
+from .layer import Layer
 
 
-class Sigmoid:
+class Sigmoid(Layer):
     def __init__(self):
         ...
 
@@ -10,3 +11,6 @@ class Sigmoid:
 
     def __str__(self):
         return "Sigmoid()"
+
+    def zero_grad(self):
+        ...

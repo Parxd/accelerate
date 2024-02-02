@@ -26,6 +26,7 @@ def main():
         error.backward()
 
         # this is pretty bad, but just for sake of demonstration
+        # see nn_regression_refactor.py for better style
         # ------
         # we also need something like torch's "with torch.no_grad()" to prevent gradient modification from
         # subtracting the actual gradient

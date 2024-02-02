@@ -17,9 +17,9 @@ def main():
     model = nn.Sequential(
         nn.Linear(3, 5),
         nn.ReLU(),
-        nn.Linear(5, 6),
+        nn.Linear(5, 5),
         nn.ReLU(),
-        nn.Linear(6, 2),
+        nn.Linear(5, 2),
         nn.Sigmoid()
     )
 
