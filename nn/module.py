@@ -8,32 +8,37 @@ class Module(ABC):
     def __init__(self,
                  *args,
                  **kwargs) -> None:
-        self._layers: List[type[Layer]] = []
+        self._children: List[type[Layer]] = []
         self._parameters: List[Tensor] = []
         for arg in args:
-            self._layers.append(arg)
-        for layer in self._layers:
+            self._children.append(arg)
+        for layer in self._children:
             for param in layer.parameters():
                 self._parameters.append(param)
 
     def __len__(self) -> int:
-        return len(self._layers)
+        return len(self._children)
 
     def __getitem__(self, item: int) -> type[Layer]:
-        return self._layers[item]
+        return self._children[item]
 
-    @property
-    def layers(self) -> List[type[Layer]]:
-        return self._layers
+    def children(self):
+        for child in self._children:
+            yield child
 
-    @property
     def parameters(self):
-        return self._parameters
+        for param in self._parameters:
+            yield f"Parameter containing:\n{param}, requires_grad={param.requires_grad})"
+
+    def named_parameters(self):
+        for i, child in enumerate(self._children):
+            for param in child.parameters():
+                yield f"{i}\nParameter containing:\n{param}, requires_grad={param.requires_grad})"
 
     @abstractmethod
-    def __call__(self, x: Tensor):
+    def forward(self, x: Tensor):
         return NotImplementedError("forward method must be defined by derived class")
 
     def zero_grad(self):
-        for layer in self._layers:
+        for layer in self._children:
             layer.zero_grad()

@@ -21,10 +21,10 @@ def main():
     criterion = nn.loss.MSELoss()
 
     for i in range(EPOCHS):
-        y_hat = model(X)
+        y_hat = model.forward(X)
         error = criterion(y_hat, Tensor(y))
         error.backward()
-        for param in model.parameters:
+        for param in model.parameters():
             param -= LR * param.grad
         model.zero_grad()
         if i % 10 == 0:

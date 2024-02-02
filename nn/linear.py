@@ -15,7 +15,7 @@ class Linear(Layer):
         return data @ self._w.transpose() + self._b
 
     def __str__(self):
-        return f"Linear(in_features={self.in_features}, out_features={self.out_features}"
+        return f"Linear(in_features={self.in_features}, out_features={self.out_features}, bias={self.bias})"
 
     def parameters(self):
         return [self._w, self._b]

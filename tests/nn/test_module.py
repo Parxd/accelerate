@@ -63,5 +63,13 @@ class TestModule:
             nn.Linear(3, 1)
         )
         # 2 Linear classes w/ 2 parameters each, so 4 parameters
-        assert len(seq.parameters) == 4
-        assert isinstance(seq.parameters[0], Tensor)
+        params = list(seq.parameters())
+        assert len(params) == 4
+        assert isinstance(params[0], Tensor)
+
+    def test_module_6(self):
+        seq = nn.Sequential(
+            nn.Linear(2, 3),
+            nn.Sigmoid(),
+            nn.Linear(3, 1)
+        )
