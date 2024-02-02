@@ -1,11 +1,10 @@
-from typing import List
 from .module import Module
 
 
 class Sequential(Module):
+    # args is a tuple: ex. (Linear, Sigmoid, Linear)
     def __init__(self,
-                 *args,
-                 **kwargs) -> None:
+                 *args) -> None:
         super().__init__(args)
         self._index = 0
 

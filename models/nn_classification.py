@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import nn
 from core import *
 
@@ -22,6 +21,7 @@ def main():
         nn.Linear(5, 2),
         nn.Sigmoid()
     )
+
     return 0
 
 

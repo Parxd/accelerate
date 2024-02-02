@@ -4,17 +4,19 @@ from .module import Module
 
 
 class Linear(Module):
-    def __init__(self, in_features, out_features, bias=True, *args, **kwargs):
-        super().__init__(Tensor.random((out_features, in_features), requires_grad=True),
-                         Tensor.random((1, out_features), requires_grad=True) if bias
-                         else Tensor(np.zeros(1, out_features)),
-                         **kwargs)
+    def __init__(self, in_features, out_features, bias=True):
+        super().__init__(
+            [
+                Tensor.random((out_features, in_features), requires_grad=True),
+                Tensor.random((1, out_features), requires_grad=True) if bias else Tensor(np.zeros(1, out_features))
+            ]
+        )
         self.in_features = in_features
         self.out_features = out_features
         self.bias = bias
 
     def forward(self, x: Tensor):
-        return x @ self._parameters[0] + self._parameters[1]
+        return x @ self._children[0] + self._children[1]
 
     def __call__(self, x: Tensor) -> Tensor:
         return self.forward(x)

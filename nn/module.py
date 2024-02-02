@@ -1,32 +1,27 @@
 from abc import ABC, abstractmethod
-from typing import List
 from core.tensor import Tensor
 
 
 class Module(ABC):
     def __init__(self,
-                 children=None,
-                 *args,
-                 **kwargs) -> None:
+                 children=None) -> None:
         if children is None:
             children = []
         self._children = children
-        self._parameters = []
-        for arg in args:
-            self._parameters.append(arg)
 
     def children(self):
-        ...
+        for child in self._children:
+            yield child
 
     def parameters(self):
         # recursive traversal
-        for param in self._parameters:
+        for child in self._children:
             # non-leaf node
-            if not isinstance(param, Tensor):
-                yield from param.parameters()
+            if isinstance(child, Module):
+                yield from child.parameters()
             # leaf node
             else:
-                yield f"Parameter containing:\n{param}, requires_grad={param.requires_grad}"
+                yield f"Parameter containing:\n{child}, requires_grad={child.requires_grad}"
 
     def named_parameters(self):
         ...
