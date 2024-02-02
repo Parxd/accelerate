@@ -1,16 +1,16 @@
 from core.tensor import Tensor
-from .layer import Layer
+from .module import Module
 
 
-class Sigmoid(Layer):
-    def __init__(self):
-        ...
+class Sigmoid(Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def __call__(self, data: Tensor) -> Tensor:
-        return data.sigmoid()
+    def forward(self, x: Tensor):
+        return x.sigmoid()
+
+    def __call__(self, x: Tensor) -> Tensor:
+        return self.forward(x)
 
     def __str__(self):
         return "Sigmoid()"
-
-    def zero_grad(self):
-        ...

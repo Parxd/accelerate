@@ -1,39 +1,32 @@
 from abc import ABC, abstractmethod
 from typing import List
 from core.tensor import Tensor
-from .layer import Layer
 
 
 class Module(ABC):
     def __init__(self,
                  *args,
                  **kwargs) -> None:
-        self._children: List[type[Layer]] = []
-        self._parameters: List[Tensor] = []
+        self._children = []
+        self._parameters = []
         for arg in args:
-            self._children.append(arg)
-        for layer in self._children:
-            for param in layer.parameters():
-                self._parameters.append(param)
-
-    def __len__(self) -> int:
-        return len(self._children)
-
-    def __getitem__(self, item: int) -> type[Layer]:
-        return self._children[item]
+            self._parameters.append(arg)
 
     def children(self):
-        for child in self._children:
-            yield child
+        ...
 
     def parameters(self):
+        # recursive traversal
         for param in self._parameters:
-            yield f"Parameter containing:\n{param}, requires_grad={param.requires_grad})"
+            # non-leaf node
+            if not isinstance(param, Tensor):
+                yield from param.parameters()
+            # leaf node
+            else:
+                yield f"Parameter containing:\n{param}, requires_grad={param.requires_grad}"
 
     def named_parameters(self):
-        for i, child in enumerate(self._children):
-            for param in child.parameters():
-                yield f"{i}\nParameter containing:\n{param}, requires_grad={param.requires_grad})"
+        ...
 
     @abstractmethod
     def forward(self, x: Tensor):

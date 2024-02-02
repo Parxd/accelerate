@@ -1,16 +1,16 @@
 from core.tensor import Tensor
-from .layer import Layer
+from .module import Module
 
 
-class ReLU(Layer):
-    def __init__(self):
-        ...
+class ReLU(Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def __call__(self, data: Tensor) -> Tensor:
-        return data.relu()
+    def forward(self, x: Tensor):
+        return x.relu()
+
+    def __call__(self, x: Tensor) -> Tensor:
+        return self.forward(x)
 
     def __str__(self):
         return "ReLU()"
-
-    def zero_grad(self):
-        ...
