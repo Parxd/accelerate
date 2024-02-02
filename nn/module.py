@@ -5,9 +5,12 @@ from core.tensor import Tensor
 
 class Module(ABC):
     def __init__(self,
+                 children=None,
                  *args,
                  **kwargs) -> None:
-        self._children = []
+        if children is None:
+            children = []
+        self._children = children
         self._parameters = []
         for arg in args:
             self._parameters.append(arg)
@@ -30,7 +33,7 @@ class Module(ABC):
 
     @abstractmethod
     def forward(self, x: Tensor):
-        return NotImplementedError("forward method must be defined by derived class")
+        return NotImplementedError("forward must be defined by derived class")
 
     def zero_grad(self):
         for layer in self._children:

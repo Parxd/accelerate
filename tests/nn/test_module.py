@@ -16,7 +16,8 @@ def test2():
         nn.Sigmoid(),
         nn.Linear(5, 2)
     )
-    model.__str__()
+    print()
+    print(model)
 
 
 def main():
