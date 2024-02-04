@@ -4,24 +4,20 @@ from core.tensor import Tensor
 
 class Module(ABC):
     def __init__(self,
-                 children=None) -> None:
-        if children is None:
-            children = []
-        self._children = children
-
-    def children(self):
-        for child in self._children:
-            yield child
+                 parameters=None) -> None:
+        if parameters is None:
+            parameters = []
+        self._parameters = parameters
 
     def parameters(self):
         # recursive traversal
-        for child in self._children:
+        for param in self._parameters:
             # non-leaf node
-            if isinstance(child, Module):
-                yield from child.parameters()
+            if isinstance(param, Module):
+                yield from param.parameters()
             # leaf node
             else:
-                yield f"Parameter containing:\n{child}, requires_grad={child.requires_grad}"
+                yield param
 
     def named_parameters(self):
         ...
@@ -31,5 +27,5 @@ class Module(ABC):
         return NotImplementedError("forward must be defined by derived class")
 
     def zero_grad(self):
-        for layer in self._children:
+        for layer in self._parameters:
             layer.zero_grad()

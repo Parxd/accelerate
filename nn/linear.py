@@ -16,7 +16,7 @@ class Linear(Module):
         self.bias = bias
 
     def forward(self, x: Tensor):
-        return x @ self._children[0] + self._children[1]
+        return x @ self._parameters[0].transpose() + self._parameters[1]
 
     def __call__(self, x: Tensor) -> Tensor:
         return self.forward(x)

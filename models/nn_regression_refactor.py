@@ -28,7 +28,7 @@ def main():
             param -= LR * param.grad
         model.zero_grad()
         if i % 10 == 0:
-            print(f"iteration {i}: error={error}")
+            print(f"iteration {i}: error={repr(error)}")
     return 0
 
 

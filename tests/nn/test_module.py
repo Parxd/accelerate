@@ -4,6 +4,7 @@ import nn
 def test1():
     X = nn.Linear(3, 5)
     for i in X.parameters():
+        print()
         print(i)
 
 
@@ -13,6 +14,7 @@ def test2():
         nn.Sigmoid(),
         nn.Linear(5, 2)
     )
+    print()
     for i in model.parameters():
         print(i)
 

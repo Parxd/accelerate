@@ -79,6 +79,10 @@ class Tensor:
         ax.plot(self.data, **kwargs)
 
     def __str__(self):
+        return (f"Tensor("
+                f"{np.array2string(self.data, prefix='Tensor(')}, requires_grad={self.requires_grad})")
+
+    def __repr__(self):
         return f"{self.data}"
 
     def __getitem__(self, item):

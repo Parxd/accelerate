@@ -9,17 +9,17 @@ class Sequential(Module):
         self._index = 0
 
     def __len__(self) -> int:
-        return len(self._children)
+        return len(self._parameters)
 
     def __getitem__(self, item: int):
-        return self._children[item]
+        return self._parameters[item]
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self._index < len(self._children):
-            layer = self._children[self._index]
+        if self._index < len(self._parameters):
+            layer = self._parameters[self._index]
             self._index += 1
             return layer
         else:
@@ -33,6 +33,6 @@ class Sequential(Module):
         return '\n'.join(lines)
 
     def forward(self, x):
-        for layer in self._children:
+        for layer in self._parameters:
             x = layer(x)
         return x

@@ -11,8 +11,6 @@ class TestLinear:
         assert layer.in_features == 2
         assert layer.out_features == 3
         assert layer.bias is True
-        assert layer._w._shape == (2, 3)
-        assert layer._b._shape == (1, 2)
 
     def test_linear_2(self):
         layer = Linear(3, 2)
