@@ -293,7 +293,7 @@ class TensorGPUBackend(TensorBackend):
     def backward(self, grad: Optional = None):
         if self.requires_grad:
             if grad is None:
-                if self.data.ndim != 0:
+                if cp.squeeze(self.data).ndim != 0:
                     raise RuntimeError("grad can be implicitly created only for scalar outputs")
                 else:
                     grad = TensorGPUBackend(1)

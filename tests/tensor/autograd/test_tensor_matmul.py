@@ -8,7 +8,7 @@ class TestTensorMatMul:
         Y = Tensor([[1],
                     [2]], requires_grad=True)
         Z = X @ Y
-        assert np.array_equal(Z.data, np.array(5))
+        assert np.array_equal(np.squeeze(Z.data), np.array(5))
         Z.backward()
         assert np.array_equal(X.grad.data, np.array([1, 2]))
 
