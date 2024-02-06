@@ -1,5 +1,6 @@
 import numpy as np
 import cupy as cp
+import pytest
 from core.tensorimpl import TensorCPUBackend, TensorGPUBackend
 
 
@@ -30,12 +31,12 @@ class TestTensorImpl:
         gpu_int = TensorGPUBackend(1)
         gpu_float = TensorGPUBackend(2.5)
         gpu_list = TensorGPUBackend([1, 2, 3])
-        gpu_np = TensorGPUBackend(np.array([1, 2, 3]))
+        gpu_cp = TensorGPUBackend(cp.array([1, 2, 3]))
 
         assert isinstance(gpu_int.data, cp.ndarray)
         assert isinstance(gpu_float.data, cp.ndarray)
         assert isinstance(gpu_list.data, cp.ndarray)
-        assert isinstance(gpu_np.data, cp.ndarray)
+        assert isinstance(gpu_cp.data, cp.ndarray)
 
     def test_tensor_impl_5(self):
         cpu_rand = TensorCPUBackend.random((3, 5))
@@ -63,3 +64,18 @@ class TestTensorImpl:
         t2 = t1 + [6, 5]
         assert isinstance(t2, TensorCPUBackend)
         assert isinstance(t2.data, np.ndarray)
+
+    def test_tensor_impl_9(self):
+        t1 = TensorCPUBackend.random((3, 5))
+        t2 = TensorGPUBackend.random((3, 5))
+        with pytest.raises(RuntimeError):
+            t3 = t1 + t2
+        t3 = t2 + 5
+        assert isinstance(t3, TensorGPUBackend)
+        assert isinstance(t3.data, cp.ndarray)
+
+    def test_tensor_impl_10(self):
+        for _ in range(300):
+            X = TensorGPUBackend.random((2048, 1024), requires_grad=True)
+            Y = TensorGPUBackend.random((1024, 5096), requires_grad=True)
+            Z = X @ Y

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 import cupy as cp
 import matplotlib.pyplot as plt
@@ -12,8 +13,8 @@ GPUType = PrimType | cp.ndarray
 
 # Returns true if t1 & t2 are same device backends, false otherwise
 def same_device(t1, t2):
-    return (isinstance(t1, TensorCPUBackend) and isinstance(t2, TensorCPUBackend)
-            or (isinstance(t1, TensorGPUBackend) and isinstance(t2, TensorGPUBackend)))
+    return isinstance(t1, TensorCPUBackend) and isinstance(t2, TensorCPUBackend) \
+        or (isinstance(t1, TensorGPUBackend) and isinstance(t2, TensorGPUBackend))
 
 
 # Converts data to np.array for CPU use
@@ -36,6 +37,7 @@ def gpu_data_convert(data: Any):
         return cp.array(data, dtype=cp.float64)
 
 
+# TODO: pls refactor this absolute mess & don't use inheritance
 class TensorBackend(ABC):
     def __init__(self,
                  data: np.ndarray | cp.ndarray,
@@ -116,8 +118,113 @@ class TensorBackend(ABC):
         else:
             raise RuntimeError("Device mismatch")
 
+    def transpose(self):
+        return self.unary_op(Transpose)
+
+    def sum(self):
+        return self.unary_op(Sum)
+
+    def __neg__(self):
+        return self.unary_op(Neg)
+
+    def exp(self):
+        return self.unary_op(Exp)
+
+    def log(self):
+        return self.unary_op(Log)
+
+    def square(self):
+        return self.unary_op(Square)
+
+    def sqrt(self):
+        return self.unary_op(Sqrt)
+
+    def mean(self):
+        return self.unary_op(Mean)
+
+    def sin(self):
+        return self.unary_op(Sin)
+
+    def cos(self):
+        return self.unary_op(Cos)
+
+    def tan(self):
+        return self.unary_op(Tan)
+
+    def arcsin(self):
+        return self.unary_op(Arcsin)
+
+    def arccos(self):
+        return self.unary_op(Arccos)
+
+    def arctan(self):
+        return self.unary_op(Arctan)
+
+    def sinh(self):
+        return self.unary_op(Sinh)
+
+    def cosh(self):
+        return self.unary_op(Cosh)
+
+    def tanh(self):
+        return self.unary_op(Tanh)
+
+    def arcsinh(self):
+        return self.unary_op(Arcsinh)
+
+    def arccosh(self):
+        return self.unary_op(Arccosh)
+
+    def arctanh(self):
+        return self.unary_op(Arctanh)
+
+    def relu(self):
+        return self.unary_op(ReLU)
+
     def __add__(self, other):
         return self.binary_op(other, Add)
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        return self.binary_op(other, Sub)
+
+    def __rsub__(self, other):
+        return -self.__sub__(other)
+
+    def __mul__(self, other):
+        return self.binary_op(other, Mul)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        return self.binary_op(other, Div)
+
+    def __matmul__(self, other):
+        return self.binary_op(other, MatMul)
+
+    # TODO: Fix these
+    def __iadd__(self, other):
+        self.data += other.data
+        return self
+
+    def __isub__(self, other):
+        self.data -= other.data
+        return self
+
+    def __imul__(self, other):
+        self.data *= other.data
+        return self
+
+    # testing compound ops.
+    def abs(self):
+        return self.square().sqrt()
+
+    def sigmoid(self):
+        backend_cls = TensorCPUBackend if self._cpu else TensorGPUBackend
+        return backend_cls(1) / ((-self).exp() + 1)
 
 
 class TensorCPUBackend(TensorBackend):

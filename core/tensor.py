@@ -1,274 +1,147 @@
-from __future__ import annotations
-from typing import Any, Callable, List, Optional, Tuple
-import numpy as np
-import matplotlib.pyplot as plt
-from .autograd import *
-
-ScalarType = int | float
-PrimType   = int | float | List
-TensorType = int | float | List | np.ndarray
-
-
-def convert_to_array(data: Any):
-    if not isinstance(data, TensorType):
-        raise TypeError("Tensor must be initialized from int, float, List, or np.ndarray")
-    if isinstance(data, PrimType):
-        return np.array(data, dtype=np.float64)
-    return data
-
-
-def convert_to_operable(other: Any) -> Tensor:
-    if isinstance(other, Tensor):
-        return other
-    if isinstance(other, ScalarType):
-        return Tensor(np.array(other))
-    elif isinstance(other, np.ndarray):
-        return Tensor(other)
-    raise TypeError(f"unsupported operand type(s) for Tensor and {type(other)}")
+from .tensorimpl import TensorCPUBackend, TensorGPUBackend
 
 
 class Tensor:
     def __init__(self,
-                 data: TensorType,
-                 requires_grad: bool = False,
-                 grad_fn: Callable = None,
-                 children: List[Tensor] = None,
-                 leaf: bool = True) -> None:
-        if children is None:
-            children = []
-        self._data: np.ndarray = convert_to_array(data)
-        self._grad: Optional[Tensor] = None
-        self._requires_grad = requires_grad
-        self._grad_fn = grad_fn
-        self._children = children
-        self._leaf = leaf
-        # np.array attributes
-        self._size = self.data.size
-        self._shape = self.data.shape
-        self._dims = self.data.ndim
-        self._datatype = self.data.dtype
-        if self._requires_grad:
-            self._grad = Tensor(np.zeros_like(self.data, dtype=np.float64))
+                 data,
+                 requires_grad=False,
+                 grad_fn=None,
+                 children=None,
+                 leaf=True,
+                 device='cpu') -> None:
+        backend_cls = TensorCPUBackend if device == 'cpu' else TensorGPUBackend
+        self._backend = backend_cls(data,
+                                    requires_grad,
+                                    grad_fn,
+                                    children,
+                                    leaf)
+        self.data = self._backend.data
+        self.grad = self._backend.grad
+        self.requires_grad = self._backend.requires_grad
+        self.grad_fn = self._backend.grad_fn
+        self.children = self._backend.children
+        self.leaf = self._backend.leaf
+        self.device = device
 
     @classmethod
-    def random(cls, shape: Tuple, requires_grad: bool) -> Tensor:
-        return cls(np.random.randn(*shape), requires_grad=requires_grad)
+    def random(cls, shape, requires_grad, device):
+        return TensorCPUBackend.random(shape, requires_grad) if device == 'cpu'\
+            else TensorGPUBackend.random(shape, requires_grad)
 
-    def zero_grad(self) -> None:
-        self.grad.data = np.zeros_like(self.data, dtype=np.float64)
+    def zero_grad(self):
+        self._backend.zero_grad()
 
-    def backward(self, grad: Optional[Tensor] = None) -> None:
-        if self.requires_grad:
-            if grad is None:
-                if self._dims != 0:
-                    raise RuntimeError("grad can be implicitly created only for scalar outputs")
-                else:
-                    grad = Tensor(1)
-            self.grad.data += grad.data
-            if not self.leaf:
-                gradients = self.grad_fn(self.grad.data)
-                for child, gradient in zip(self.children, gradients):
-                    if gradient is not None and child.requires_grad is True:
-                        child.backward(gradient)
-        else:
-            raise RuntimeError(".backward() run on Tensor with requires_grad=False")
+    def backward(self, grad):
+        self._backend.backward(grad)
 
-    def plot(self, ax=None, **kwargs):
-        if ax is None:
-            ax = plt.gca()
-        ax.plot(self.data, **kwargs)
-
-    def __str__(self):
-        return (f"Tensor("
-                f"{np.array2string(self.data, prefix='Tensor(')}, requires_grad={self.requires_grad})")
-
-    def __repr__(self):
-        return f"{self.data}"
-
-    def __getitem__(self, item):
-        return self.data[item]
-
-    def __setitem__(self, key, value):
-        self.data[key] = value
-
-    def __len__(self):
-        return len(self.data)
-
-    def __eq__(self, other):
-        return np.array_equal(self.data, other.data) and self._datatype == other._datatype
-
-    def _unary_op(self, grad_type):
-        grad_fn = grad_type(self.data)
-        return Tensor(data=grad_fn.data,
-                      requires_grad=self.requires_grad,
-                      grad_fn=grad_fn,
-                      children=[self],
-                      leaf=False)
-
-    def _binary_op(self, other, grad_type):
-        grad_fn = grad_type(self.data, other.data)
-        return Tensor(data=grad_fn.data,
-                      requires_grad=(self.requires_grad or other.requires_grad),
-                      grad_fn=grad_fn,
-                      children=[self, other],
-                      leaf=False)
-
-    # primitive ops.
     def transpose(self):
-        return self._unary_op(Transpose)
+        return self._backend.transpose()
 
     def sum(self):
-        return self._unary_op(Sum)
+        return self._backend.sum()
 
     def __neg__(self):
-        return self._unary_op(Neg)
+        return self._backend.__neg__()
 
     def exp(self):
-        return self._unary_op(Exp)
+        return self._backend.exp()
 
     def log(self):
-        return self._unary_op(Log)
+        return self._backend.log()
 
     def square(self):
-        return self._unary_op(Square)
+        return self._backend.square()
 
     def sqrt(self):
-        return self._unary_op(Sqrt)
+        return self._backend.sqrt()
 
     def mean(self):
-        return self._unary_op(Mean)
+        return self._backend.mean()
 
     def sin(self):
-        return self._unary_op(Sin)
+        return self._backend.sin()
 
     def cos(self):
-        return self._unary_op(Cos)
+        return self._backend.cos()
 
     def tan(self):
-        return self._unary_op(Tan)
+        return self._backend.tan()
 
     def arcsin(self):
-        return self._unary_op(Arcsin)
+        return self._backend.arcsin()
 
     def arccos(self):
-        return self._unary_op(Arccos)
+        return self._backend.arccos()
 
     def arctan(self):
-        return self._unary_op(Arctan)
+        return self._backend.arctan()
 
     def sinh(self):
-        return self._unary_op(Sinh)
+        return self._backend.sinh()
 
     def cosh(self):
-        return self._unary_op(Cosh)
+        return self._backend.cosh()
 
     def tanh(self):
-        return self._unary_op(Tanh)
+        return self._backend.tanh()
 
     def arcsinh(self):
-        return self._unary_op(Arcsinh)
+        return self._backend.arcsinh()
 
     def arccosh(self):
-        return self._unary_op(Arccosh)
+        return self._backend.arccosh()
 
     def arctanh(self):
-        return self._unary_op(Arctanh)
+        return self._backend.arctanh()
 
     def relu(self):
-        return self._unary_op(ReLU)
+        return self._backend.relu()
 
     def __add__(self, other):
-        return self._binary_op(convert_to_operable(other), Add)
+        return self._backend.__add__(other.backend)
 
     def __radd__(self, other):
-        return self.__add__(other)
+        return self._backend.__radd__(other.backend)
 
     def __sub__(self, other):
-        return self._binary_op(convert_to_operable(other), Sub)
+        return self._backend.__sub__(other.backend)
 
     def __rsub__(self, other):
-        return -self.__sub__(other)
-    
-    # these in-place operations don't accumulate gradients as of now
-    # this is mostly for convenience
-    # if they did accumulate gradients, we would need to make sure that no gradients are added on when we do
-    # gradient descent
-    def __iadd__(self, other):
-        self.data += convert_to_operable(other).data
-        return self
-
-    def __isub__(self, other):
-        self.data -= convert_to_operable(other).data
-        return self
-    
-    def __imul__(self, other):
-        self.data *= convert_to_operable(other).data
-        return self
-    # -------
+        return self._backend.__rsub__(other.backend)
 
     def __mul__(self, other):
-        return self._binary_op(convert_to_operable(other), Mul)
+        return self._backend.__mul__(other.backend)
 
     def __rmul__(self, other):
-        return self.__mul__(other)
+        return self._backend.__rmul__(other.backend)
 
     def __truediv__(self, other):
-        return self._binary_op(convert_to_operable(other), Div)
+        return self._backend.__truediv__(other.backend)
 
     def __matmul__(self, other):
-        return self._binary_op(convert_to_operable(other), MatMul)
+        return self._backend.__matmul__(other.backend)
 
-    # compound ops. (could be implemented with their known closed-form derivatives, but this is just 
-    # to see if gradients are correctly calculated w/ chain rule, since these are composition functions)
+    # TODO: Fix these
+    def __iadd__(self, other):
+        ...
+
+    def __isub__(self, other):
+        ...
+
+    def __imul__(self, other):
+        ...
+
     def abs(self):
-        return self.square().sqrt()
+        return self._backend.abs()
 
     def sigmoid(self):
-        return Tensor(1) / ((-self).exp() + 1)
-
-    # attributes
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, data):
-        if not isinstance(data, np.ndarray):
-            raise TypeError("data must be of type np.ndarray")
-        self._data = data
-        self._size = self.data.size
-        self._shape = self.data.shape
-        self._dims = self.data.ndim
-        self._datatype = self.data.dtype
+        return self._backend.sigmoid()
 
     @property
-    def grad(self):
-        return self._grad
-
-    @grad.setter
-    def grad(self, grad):
-        self._grad = grad
-
-    @property
-    def requires_grad(self):
-        return self._requires_grad
-
-    @requires_grad.setter
-    def requires_grad(self, requires_grad):
-        if not isinstance(requires_grad, bool):
-            raise TypeError("requires_grad must be of type bool")
-        self._requires_grad = requires_grad
-        if self._requires_grad:
-            self.zero_grad()
-
-    @property
-    def grad_fn(self):
-        return self._grad_fn
-
-    @property
-    def children(self):
-        return self._children
-
-    @property
-    def leaf(self):
-        return self._leaf
+    def backend(self):
+        """
+        Returns the backend of the Tensor interface
+        Not to be used directly, use provided methods of Tensor
+        :return: TensorCPUBackend if device == 'cpu', else TensorGPUBackend
+        """
+        return self._backend
