@@ -41,3 +41,25 @@ class TestTensorImpl:
         cpu_rand = TensorCPUBackend.random((3, 5))
         assert isinstance(cpu_rand.data, np.ndarray)
         assert cpu_rand.requires_grad is False
+
+    def test_tensor_impl_6(self):
+        t1 = TensorCPUBackend.random((3, 5))
+        t2 = TensorCPUBackend.random((3, 5), requires_grad=True)
+        t3 = t1 + t2
+        assert isinstance(t3, TensorCPUBackend)
+        assert isinstance(t3.data, np.ndarray)
+        assert t3.requires_grad is True
+
+    def test_tensor_impl_7(self):
+        t1 = TensorGPUBackend.random((3, 5))
+        t2 = TensorGPUBackend.random((3, 5), requires_grad=True)
+        t3 = t1 + t2
+        assert isinstance(t3, TensorGPUBackend)
+        assert isinstance(t3.data, cp.ndarray)
+        assert t3.requires_grad is True
+
+    def test_tensor_impl_8(self):
+        t1 = TensorCPUBackend.random((1, 2))
+        t2 = t1 + [6, 5]
+        assert isinstance(t2, TensorCPUBackend)
+        assert isinstance(t2.data, np.ndarray)
