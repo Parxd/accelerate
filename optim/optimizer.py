@@ -14,4 +14,3 @@ class Optimizer(ABC):
     def zero_grad(self):
         for param in self.params:
             param.zero_grad()
-

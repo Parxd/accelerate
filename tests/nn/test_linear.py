@@ -34,8 +34,8 @@ class TestLinear:
                     [0.7, 0.8]])
         y_hat = layer(X)
         criterion = L1Loss()
-        loss = criterion(y_hat, y)
-        loss.backward()
+        err = criterion(y_hat, y)
+        err.backward()
 
         # ensure gradients are filled out
         assert layer._w.grad != Tensor(np.zeros_like(layer._w.grad))

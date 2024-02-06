@@ -5,10 +5,13 @@ from .module import Module
 
 class Linear(Module):
     def __init__(self, in_features, out_features, bias=True):
+        self.w = Tensor.random((out_features, in_features), requires_grad=True)
+        self.b = Tensor.random((1, out_features), requires_grad=True) if bias \
+            else Tensor(np.zeros(1, out_features))
         super().__init__(
             [
-                Tensor.random((out_features, in_features), requires_grad=True),
-                Tensor.random((1, out_features), requires_grad=True) if bias else Tensor(np.zeros(1, out_features))
+                self.w,
+                self.b
             ]
         )
         self.in_features = in_features
@@ -16,7 +19,7 @@ class Linear(Module):
         self.bias = bias
 
     def forward(self, x: Tensor):
-        return x @ self._parameters[0].transpose() + self._parameters[1]
+        return x @ self.w.transpose() + self.b
 
     def __call__(self, x: Tensor) -> Tensor:
         return self.forward(x)
