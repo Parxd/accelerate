@@ -109,6 +109,9 @@ class Tensor:
             device='cpu' if self.device == CPU else 'cuda'
         )
 
+    def __neg__(self):
+        return self._operation(Neg)
+
     def __add__(self, other) -> Tensor:
         return self._operation(Add, other)
 
@@ -118,8 +121,29 @@ class Tensor:
     def __mul__(self, other) -> Tensor:
         return self._operation(Mul, other)
 
+    def __truediv__(self, other) -> Tensor:
+        return self._operation(Div, other)
+
+    def __matmul__(self, other):
+        return self._operation(MatMul, other)
+
     def exp(self) -> Tensor:
         return self._operation(Exp)
+
+    def log(self) -> Tensor:
+        return self._operation(Log)
+
+    def sigmoid(self) -> Tensor:
+        return self._operation(Sigmoid)
+
+    def relu(self) -> Tensor:
+        return self._operation(ReLU)
+
+    def square(self) -> Tensor:
+        return self._operation(Square)
+
+    def sqrt(self) -> Tensor:
+        return self._operation(Sqrt)
 
     def sum(self) -> Tensor:
         return self._operation(Sum)
@@ -127,5 +151,14 @@ class Tensor:
     def mean(self) -> Tensor:
         return self._operation(Mean)
 
+    def transpose(self) -> Tensor:
+        return self._operation(Transpose)
+
     def sin(self) -> Tensor:
         return self._operation(Sin)
+
+    def cos(self) -> Tensor:
+        return self._operation(Cos)
+
+    def tan(self) -> Tensor:
+        return self._operation(Tan)

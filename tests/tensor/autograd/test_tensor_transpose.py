@@ -11,7 +11,7 @@ class TestTensorTranspose:
         assert isinstance(Y, Tensor)
 
         assert X.data.shape == (2, 3)
-        assert X._shape == (2, 3)
+        assert X.shape == (2, 3)
 
         assert Y.data.shape == (3, 2)
-        assert Y._shape == (3, 2)
+        assert Y.shape == (3, 2)
