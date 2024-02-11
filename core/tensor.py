@@ -11,7 +11,7 @@ GPU = Device.GPU
 def np_conv(x):
     # if provided scalar, list, numpy.ndarray
     try:
-        return np.asarray(x)
+        return np.asarray(x, dtype=np.float64)
     # else if provided cupy.ndarray
     except TypeError:
         return x.get()
@@ -20,11 +20,11 @@ def np_conv(x):
 class Tensor:
     def __init__(self, data, requires_grad=False, grad_fn=None, _children=None, device='cpu'):
         if _children is None:
-            _children = []
+            _children = ()
         self.data: np.ndarray | cp.ndarray = np_conv(data)
         self.grad: Optional[Tensor] = None
         self.requires_grad: bool = requires_grad
-        self.grad_fn: Callable[[], Tuple] = grad_fn
+        self.grad_fn: Callable[[np.ndarray | cp.ndarray], Tuple] = grad_fn
         self._children: Tuple[Tensor] = _children
         self.device: Device = CPU if device == 'cpu' else GPU
         self.dtype: np.dtype = self.data.dtype
@@ -53,7 +53,7 @@ class Tensor:
         self.data[key] = value
 
     def __len__(self):
-        return len(self.data)
+        return self.data.size
 
     def to(self, new: str):
         new = CPU if new == "cpu" else GPU
@@ -78,7 +78,23 @@ class Tensor:
                     grad = Tensor(1,
                                   device='cpu' if self.device == CPU else 'cuda')
             self.grad.data += grad.data
-            gradients = ...
+            if self.grad_fn:
+                gradients = self.grad_fn(self.grad.data)
+                for child, gradient in zip(self._children, gradients):
+                    child.backward(gradient)
+
+    def detach(self):
+        return Tensor(
+            self.data,
+            requires_grad=False,
+            grad_fn=None,
+            _children=None,
+            device='cpu' if self.device == CPU else 'cuda'
+        )
+
+    def zero_grad(self):
+        self.grad = Tensor(np.zeros_like(self.data),
+                           device='cpu' if self.device == CPU else 'cuda')
 
     def _operation(self,
                    node_type: Type[Node],
@@ -93,8 +109,23 @@ class Tensor:
             device='cpu' if self.device == CPU else 'cuda'
         )
 
+    def __add__(self, other) -> Tensor:
+        return self._operation(Add, other)
+
+    def __sub__(self, other) -> Tensor:
+        return self._operation(Sub, other)
+
     def __mul__(self, other) -> Tensor:
         return self._operation(Mul, other)
 
     def exp(self) -> Tensor:
         return self._operation(Exp)
+
+    def sum(self) -> Tensor:
+        return self._operation(Sum)
+
+    def mean(self) -> Tensor:
+        return self._operation(Mean)
+
+    def sin(self) -> Tensor:
+        return self._operation(Sin)

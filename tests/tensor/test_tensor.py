@@ -36,6 +36,3 @@ class TestTensor:
         Tensor(5, device="cuda")
         Tensor(5., device="cuda")
         Tensor([5.], device="cuda")
-
-    def test_tensor_5(self):
-        ...
