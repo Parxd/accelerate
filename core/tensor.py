@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Callable, Optional, Tuple, Type
-
 from core.operators import *
 from core.device import Device
 
@@ -8,13 +7,21 @@ CPU = Device.CPU
 GPU = Device.GPU
 
 
-def np_conv(x):
+def np_conv(x: int | float | list | np.ndarray | cp.ndarray) -> np.ndarray:
     # if provided scalar, list, numpy.ndarray
     try:
         return np.asarray(x, dtype=np.float64)
     # else if provided cupy.ndarray
     except TypeError:
         return x.get()
+
+
+def tensor_conv(x: int | float | list | np.ndarray | cp.ndarray | Tensor,
+                device: Device) -> Tensor:
+    if hasattr(x, "grad"):
+        return x
+    return Tensor(x,
+                  device='cpu' if device == CPU else 'gpu')
 
 
 class Tensor:
@@ -37,7 +44,8 @@ class Tensor:
             self.data = cp.asarray(self.data)
 
     def __eq__(self, other):
-        return np.array_equal(self.data, other.data) and self.dtype == other.dtype
+        return (np.array_equal(self.data, other.data) and np.array_equal(self.grad, other.grad) and
+                self.device is other.device and self.dtype == other.dtype)
 
     def __str__(self):
         return (f"Tensor("
@@ -81,7 +89,9 @@ class Tensor:
             if self.grad_fn:
                 gradients = self.grad_fn(self.grad.data)
                 for child, gradient in zip(self._children, gradients):
-                    child.backward(gradient)
+                    # re-wrap incoming gradient array as Tensor
+                    child.backward(Tensor(gradient,
+                                          device='cpu' if self.device == CPU else 'cuda'))
 
     def detach(self):
         return Tensor(
@@ -98,34 +108,56 @@ class Tensor:
 
     def _operation(self,
                    node_type: Type[Node],
+                   reverse: bool = False,
                    *args) -> Tensor:
         node = node_type()
-        other = args[0] if args else None
+        other = tensor_conv(args[0], self.device) if args else None
+        if not other:
+            data = node.forward(self.data)
+        else:
+            order = (other.data, self.data) if reverse else (self.data, other.data)
+            data = node.forward(*order)
         return Tensor(
-            data=node.forward(self.data, other.data) if other else node.forward(self.data),
+            data=data,
             requires_grad=(self.requires_grad or other.requires_grad) if other else self.requires_grad,
             grad_fn=node.backward,
             _children=(self, other) if other else (self,),
             device='cpu' if self.device == CPU else 'cuda'
         )
 
-    def __neg__(self):
+    def __neg__(self) -> Tensor:
         return self._operation(Neg)
 
     def __add__(self, other) -> Tensor:
-        return self._operation(Add, other)
+        return self._operation(Add, False, other)
+
+    def __radd__(self, other) -> Tensor:
+        return self._operation(Add, True, other)
 
     def __sub__(self, other) -> Tensor:
-        return self._operation(Sub, other)
+        return self._operation(Sub, False, other)
+
+    def __rsub__(self, other) -> Tensor:
+        return self._operation(Sub, True, other)
+
+    def __isub__(self, other):
+        self.data -= other.data
+        return
 
     def __mul__(self, other) -> Tensor:
-        return self._operation(Mul, other)
+        return self._operation(Mul, False, other)
+
+    def __rmul__(self, other) -> Tensor:
+        return self._operation(Mul, True, other)
 
     def __truediv__(self, other) -> Tensor:
-        return self._operation(Div, other)
+        return self._operation(Div, False, other)
 
-    def __matmul__(self, other):
-        return self._operation(MatMul, other)
+    def __rtruediv__(self, other) -> Tensor:
+        return self._operation(Div, True, other)
+
+    def __matmul__(self, other) -> Tensor:
+        return self._operation(MatMul, False, other)
 
     def exp(self) -> Tensor:
         return self._operation(Exp)

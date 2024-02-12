@@ -1,9 +1,6 @@
 from core.node import *
 
 
-Array = np.ndarray | cp.ndarray
-
-
 def handle_broadcast(tensor: Array,
                      grad: Array) -> Array:
     """
@@ -67,7 +64,7 @@ class Sigmoid(Node):
         return self._saved_result
 
     def backward(self, gradient: Array) -> Array:
-        return gradient * (self._saved_result * (1 - self._saved_result))
+        return gradient * (self._saved_result * (1 - self._saved_result)),
 
 
 class ReLU(Node):

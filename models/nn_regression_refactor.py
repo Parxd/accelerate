@@ -1,5 +1,5 @@
 import numpy as np
-from core import *
+from core.tensor import Tensor
 import nn
 
 LR = 0.01

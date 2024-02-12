@@ -3,7 +3,7 @@ from core.tensor import Tensor
 
 
 class TestTensorDetach:
-    def test_tensor_5(self):
+    def test_tensor_detach_1(self):
         A = Tensor(np.array([1, 2, 3]), requires_grad=True)
         B = Tensor(np.array([1, 2, 3]), requires_grad=True)
         C = (A + B).sum()
@@ -15,7 +15,7 @@ class TestTensorDetach:
         # gradient should not have been calculated
         assert A.grad is None
 
-    def test_tensor_6(self):
+    def test_tensor_detach_2(self):
         A = Tensor(np.array([1, 1]), requires_grad=True)
         B = Tensor(np.array([1, 1]), requires_grad=True)
         C = Tensor(np.array([1, 1]), requires_grad=True)
