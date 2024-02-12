@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import warnings
 from typing import Callable, Optional, Tuple, Type
 from core.operators import *
 from core.device import Device
@@ -8,10 +10,10 @@ GPU = Device.GPU
 
 
 def np_conv(x: int | float | list | np.ndarray | cp.ndarray) -> np.ndarray:
-    # if provided scalar, list, numpy.ndarray
+    # if provided (scalar, list, numpy.ndarray)
     try:
         return np.asarray(x, dtype=np.float64)
-    # else if provided cupy.ndarray
+    # else if provided (cupy.ndarray)
     except TypeError:
         return x.get()
 
@@ -44,8 +46,12 @@ class Tensor:
             self.data = cp.asarray(self.data)
 
     def __eq__(self, other):
-        return (np.array_equal(self.data, other.data) and np.array_equal(self.grad, other.grad) and
-                self.device is other.device and self.dtype == other.dtype)
+        return (np.allclose(self.data, other.data) and
+                np.allclose(self.grad.data, other.grad.data) if self.grad else ... and
+                self.device is other.device)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __str__(self):
         return (f"Tensor("
@@ -93,6 +99,7 @@ class Tensor:
                     child.backward(Tensor(gradient,
                                           device='cpu' if self.device == CPU else 'cuda'))
 
+    # shallow mem-copy disconnected from autograd graph
     def detach(self):
         return Tensor(
             self.data,
@@ -134,6 +141,10 @@ class Tensor:
     def __radd__(self, other) -> Tensor:
         return self._operation(Add, True, other)
 
+    def __iadd__(self, other) -> Tensor:
+        self.data += other.data
+        warnings.warn("in-place operations may break autograd connections")
+
     def __sub__(self, other) -> Tensor:
         return self._operation(Sub, False, other)
 
@@ -142,7 +153,7 @@ class Tensor:
 
     def __isub__(self, other):
         self.data -= other.data
-        return
+        warnings.warn("in-place operations may break autograd connections")
 
     def __mul__(self, other) -> Tensor:
         return self._operation(Mul, False, other)
@@ -158,6 +169,13 @@ class Tensor:
 
     def __matmul__(self, other) -> Tensor:
         return self._operation(MatMul, False, other)
+
+    # deep mem-copy still connected to autograd graph
+    def clone(self) -> Tensor:
+        return self._operation(Clone)
+
+    def transpose(self) -> Tensor:
+        return self._operation(Transpose)
 
     def exp(self) -> Tensor:
         return self._operation(Exp)
@@ -182,9 +200,6 @@ class Tensor:
 
     def mean(self) -> Tensor:
         return self._operation(Mean)
-
-    def transpose(self) -> Tensor:
-        return self._operation(Transpose)
 
     def sin(self) -> Tensor:
         return self._operation(Sin)

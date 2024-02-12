@@ -72,11 +72,13 @@ class TestTensorOps:
         C = A - B
         assert C == Tensor([-3, -3, -3])
 
+        # need to fix by overloading ufunc for np arrays
         C = B - A
         assert isinstance(C, np.ndarray)
 
         C = A * B
         assert C == Tensor([4, 10, 18])
 
+        # need to fix by overloading ufunc for np arrays
         C = B * A
         assert isinstance(C, np.ndarray)

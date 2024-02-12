@@ -48,7 +48,7 @@ class Log(Node):
     def forward(self,
                 x: Array) -> Array:
         self._data = x
-        return x.log()
+        return np.log(x)
 
     def backward(self, gradient: Array) -> Array:
         return gradient / self._data,
@@ -140,6 +140,18 @@ class Transpose(Node):
 
     def backward(self, gradient: Array) -> Array:
         return gradient.T,
+
+
+class Clone(Node):
+    def __init__(self):
+        ...
+
+    def forward(self,
+                x: Array) -> Array:
+        return x.copy()
+
+    def backward(self, gradient: Array) -> Array:
+        return gradient,
 
 
 class Sin(Node):
