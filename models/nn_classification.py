@@ -1,6 +1,6 @@
 import numpy as np
 import nn
-from core import *
+import core
 
 LR = 0.01
 EPOCHS = 50

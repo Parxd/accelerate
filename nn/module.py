@@ -22,10 +22,14 @@ class Module(ABC):
     def named_parameters(self):
         ...
 
-    @abstractmethod
-    def forward(self, x: Tensor):
-        return NotImplementedError("forward must be defined by derived class")
-
     def zero_grad(self):
         for layer in self._parameters:
             layer.zero_grad()
+
+    def to(self, device: str):
+        for tensor in self.parameters():
+            tensor.to(device)
+
+    @abstractmethod
+    def forward(self, x: Tensor):
+        return NotImplementedError("forward must be defined by derived class")

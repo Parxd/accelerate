@@ -1,4 +1,6 @@
+import cupy as cp
 import nn
+from core.device import Device
 
 
 def test1():
@@ -17,6 +19,18 @@ def test2():
     print()
     for i in model.parameters():
         print(i)
+
+
+def test3():
+    model = nn.Sequential(
+        nn.Linear(3, 5),
+        nn.Sigmoid(),
+        nn.Linear(5, 2)
+    )
+    model.to('cuda')
+    for parameter in model.parameters():
+        assert parameter.device is Device.GPU
+        assert isinstance(parameter.data, cp.ndarray)
 
 
 def main():

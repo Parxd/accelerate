@@ -1,8 +1,10 @@
 from core import Tensor
 
 
-def zeros(shape):
-    ...
+def zeros(shape) -> Tensor:
+    return Tensor(
+
+    )
 
 
 def zeros_like(tensor):

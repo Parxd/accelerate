@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import warnings
 from typing import Callable, Optional, Tuple, Type
 from core.operators import *
@@ -7,15 +6,6 @@ from core.device import Device
 
 CPU = Device.CPU
 GPU = Device.GPU
-
-
-def np_conv(x: int | float | list | np.ndarray | cp.ndarray) -> np.ndarray:
-    # if provided (scalar, list, numpy.ndarray)
-    try:
-        return np.asarray(x, dtype=np.float64)
-    # else if provided (cupy.ndarray)
-    except TypeError:
-        return x.get()
 
 
 def tensor_conv(x: int | float | list | np.ndarray | cp.ndarray | Tensor,
@@ -27,10 +17,10 @@ def tensor_conv(x: int | float | list | np.ndarray | cp.ndarray | Tensor,
 
 
 class Tensor:
-    def __init__(self, data, requires_grad=False, grad_fn=None, _children=None, device='cpu'):
+    def __init__(self, data, requires_grad=False, grad_fn=None, _children=None, device='cpu') -> None:
         if _children is None:
             _children = ()
-        self.data: np.ndarray | cp.ndarray = np_conv(data)
+        self.data: np.ndarray | cp.ndarray = np.asarray(data, dtype=np.float64) if device == 'cpu' else cp.asarray(data, dtype=cp.float64)
         self.grad: Optional[Tensor] = None
         self.requires_grad: bool = requires_grad
         self.grad_fn: Callable[[np.ndarray | cp.ndarray], Tuple] = grad_fn
@@ -41,11 +31,9 @@ class Tensor:
         self.shape: Tuple[int, ...] = self.data.shape
         if self.requires_grad:
             self.grad = Tensor(np.zeros_like(self.data),
-                               device='cpu' if self.device == CPU else 'cuda')
-        if self.device == GPU:
-            self.data = cp.asarray(self.data)
+                               device='cpu' if self.device is CPU else 'cuda')
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return (np.allclose(self.data, other.data) and
                 np.allclose(self.grad.data, other.grad.data) if self.grad else ... and
                 self.device is other.device)
@@ -55,7 +43,8 @@ class Tensor:
 
     def __str__(self):
         return (f"Tensor("
-                f"{np.array2string(self.data, prefix='Tensor(')}, device={self.device})")
+                f"{np.array2string(self.data, prefix='Tensor(')}, requires_grad={self.requires_grad}, "
+                f"device={self.device})")
 
     def __repr__(self):
         return f"{self.data}"
@@ -69,7 +58,7 @@ class Tensor:
     def __len__(self):
         return self.data.size
 
-    def to(self, new: str):
+    def to(self, new: str) -> None:
         new = CPU if new == "cpu" else GPU
         # already on same device
         if self.device == new:
@@ -77,41 +66,48 @@ class Tensor:
         # gpu -> cpu
         if new == CPU:
             self.data = self.data.get()
+            if self.requires_grad:
+                self.grad.to("cpu")
             self.device = CPU
         # cpu -> gpu
         if new == GPU:
-            self.data = cp.array(self.data)
+            self.data = cp.asarray(self.data)
+            if self.requires_grad:
+                self.grad.to("cuda")
             self.device = GPU
 
-    def backward(self, grad: Optional[Tensor] = None):
+    def backward(self, grad: Optional[Tensor] = None) -> None:
         if self.requires_grad:
             if grad is None:
                 if self.ndim != 0:
                     raise RuntimeError("grad can be implicitly created only for scalar outputs")
                 else:
                     grad = Tensor(1,
-                                  device='cpu' if self.device == CPU else 'cuda')
+                                  device='cpu' if self.device is CPU else 'cuda')
             self.grad.data += grad.data
             if self.grad_fn:
                 gradients = self.grad_fn(self.grad.data)
                 for child, gradient in zip(self._children, gradients):
                     # re-wrap incoming gradient array as Tensor
                     child.backward(Tensor(gradient,
-                                          device='cpu' if self.device == CPU else 'cuda'))
+                                          device='cpu' if self.device is CPU else 'cuda'))
 
     # shallow mem-copy disconnected from autograd graph
-    def detach(self):
+    def detach(self) -> Tensor:
         return Tensor(
             self.data,
             requires_grad=False,
             grad_fn=None,
             _children=None,
-            device='cpu' if self.device == CPU else 'cuda'
+            device='cpu' if self.device is CPU else 'cuda'
         )
 
-    def zero_grad(self):
+    def zero_grad(self) -> None:
         self.grad = Tensor(np.zeros_like(self.data),
-                           device='cpu' if self.device == CPU else 'cuda')
+                           device='cpu' if self.device is CPU else 'cuda')
+
+    def numpy(self) -> np.ndarray:
+        return np.asarray(self.data)
 
     def _operation(self,
                    node_type: Type[Node],
@@ -122,14 +118,13 @@ class Tensor:
         if not other:
             data = node.forward(self.data)
         else:
-            order = (other.data, self.data) if reverse else (self.data, other.data)
-            data = node.forward(*order)
+            data = node.forward(other.data, self.data) if reverse else node.forward(self.data, other.data)
         return Tensor(
             data=data,
             requires_grad=(self.requires_grad or other.requires_grad) if other else self.requires_grad,
             grad_fn=node.backward,
             _children=(self, other) if other else (self,),
-            device='cpu' if self.device == CPU else 'cuda'
+            device='cpu' if not hasattr(data, "get") else 'cuda'
         )
 
     def __neg__(self) -> Tensor:
